@@ -1,0 +1,17 @@
+{
+  "name": "Cuaderno de Cargas",
+  "short_name": "Cargas",
+  "description": "Cuaderno de entreno: series, RIR, descansos y progreso por ejercicio.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ECEEF2",
+  "theme_color": "#12161C",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

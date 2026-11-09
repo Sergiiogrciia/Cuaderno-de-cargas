@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cuaderno de Cargas</title>
+<meta name="description" content="Cuaderno de entreno: series, RIR, descansos y progreso por ejercicio.">
+<meta name="theme-color" content="#12161C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cargas">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Archivo:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: app de una columna (máx. 640px). Barra superior fija con día, progreso y selector de días; tarjetas plegables por ejercicio; dock inferior con temporizador y pestañas. */
+:root {
+  --bg: #ECEEF2;
+  --surface: #FFFFFF;
+  --field: #F2F4F7;
+  --ink: #12161C;
+  --muted: #586273;
+  --line: #D4D9E0;
+  --accent: #1F4FD8;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E0E8FC;
+  --good: #11764A;
+  --good-soft: #DCF0E5;
+  --warn: #9A4A12;
+  --warn-soft: #F6E6D8;
+  --dock: #12161C;
+  --dock-ink: #F2F4F7;
+  --dock-accent: #8FB0FF;
+  --display: "Big Shoulders Display", "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1015;
+    --surface: #161A21;
+    --field: #1D222B;
+    --ink: #E8EBF0;
+    --muted: #96A0AF;
+    --line: #272D37;
+    --accent: #7FA3FF;
+    --accent-ink: #0A1433;
+    --accent-soft: #1A2546;
+    --good: #5ECB95;
+    --good-soft: #12291E;
+    --warn: #E9A570;
+    --warn-soft: #33251A;
+    --dock: #1D222B;
+    --dock-ink: #E8EBF0;
+    --dock-accent: #7FA3FF;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1015;
+  --surface: #161A21;
+  --field: #1D222B;
+  --ink: #E8EBF0;
+  --muted: #96A0AF;
+  --line: #272D37;
+  --accent: #7FA3FF;
+  --accent-ink: #0A1433;
+  --accent-soft: #1A2546;
+  --good: #5ECB95;
+  --good-soft: #12291E;
+  --warn: #E9A570;
+  --warn-soft: #33251A;
+  --dock: #1D222B;
+  --dock-ink: #E8EBF0;
+  --dock-accent: #7FA3FF;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.4;
+  padding-block: 0 calc(150px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--dock); }
+.app { max-width: 640px; margin: 0 auto; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Barra superior */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); padding-block: 14px 10px; display: flex; flex-direction: column; gap: 10px; }
+.bar-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.eyebrow { margin: 0; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.status { font-size: 0.75rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.status[data-s="ok"]::before { background: var(--good); }
+.status[data-s="local"]::before { background: var(--good); }
+.status[data-s="err"]::before { background: var(--warn); }
+.title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 2.6rem; line-height: 0.9; letter-spacing: 0.01em; text-transform: uppercase; text-wrap: balance; }
+.prog-txt { font-size: 0.85rem; color: var(--muted); text-align: right; white-space: nowrap; }
+.prog-txt b { font-family: var(--display); font-size: 1.5rem; color: var(--ink); font-weight: 800; }
+.prog { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; }
+.prog.full i { background: var(--good); }
+@media (prefers-reduced-motion: no-preference) { .prog i { transition: width 0.3s ease; } }
+
+.days { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.day { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 2px 6px; text-align: center; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 52px; }
+.day b { font-family: var(--display); font-size: 1.2rem; font-weight: 800; line-height: 1; letter-spacing: 0.04em; text-transform: uppercase; }
+.day span { font-size: 0.7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.day[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.day[aria-pressed="true"] span { color: var(--bg); opacity: 0.75; }
+.day .dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+
+/* Vista entreno */
+.view { padding-top: 6px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 12px; }
+.toolbar input[type="date"] { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; min-height: 40px; min-width: 0; }
+.chip-btn { background: var(--surface); border: 1px solid var(--line); border-radius: 99px; min-height: 40px; padding: 0 14px; font-size: 0.85rem; font-weight: 600; }
+.banner { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: var(--warn-soft); color: var(--warn); font-size: 0.9rem; }
+.banner p { margin: 0; min-width: 0; }
+.banner b { display: block; font-size: 0.95rem; }
+.banner button { flex: none; background: transparent; color: var(--warn); border: 1px solid currentColor; border-radius: 8px; min-height: 36px; padding: 0 10px; font-size: 0.8rem; font-weight: 600; }
+
+.ex { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; scroll-margin-top: calc(var(--barH, 170px) + 10px); overflow: hidden; }
+.ex.next { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.ex.complete { background: var(--field); }
+.ex-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px; background: none; border: 0; text-align: left; }
+.ex-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ex-title h3 { margin: 0; font-size: 1.02rem; font-weight: 600; line-height: 1.25; text-wrap: balance; }
+.ex-sub { font-size: 0.78rem; color: var(--muted); }
+.ex.complete .ex-title h3 { color: var(--muted); }
+.count { flex: none; font-family: var(--display); font-weight: 800; font-size: 1.25rem; color: var(--muted); min-width: 2.4ch; text-align: right; }
+.count.ok { color: var(--good); }
+.count svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+.tag { flex: none; width: 26px; height: 26px; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 1rem; border: 1.5px solid var(--ink); color: var(--ink); }
+.tag.A { border-radius: 50%; }
+.tag.B { border-radius: 4px; background: var(--ink); color: var(--surface); }
+.tag.C { border-radius: 3px; transform: rotate(45deg) scale(0.82); }
+.tag.C span { transform: rotate(-45deg); }
+.tag.F { border-radius: 4px; border-style: dashed; }
+.ex-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.last { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.last-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
+.link { background: none; border: 0; padding: 4px 0; color: var(--accent); font-size: 0.85rem; font-weight: 600; }
+.sugg { margin: 0; font-size: 0.88rem; font-weight: 500; color: var(--accent); background: var(--accent-soft); border-radius: 8px; padding: 8px 10px; }
+.note { margin: 0; font-size: 0.8rem; color: var(--muted); }
+.sets { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+.set { display: grid; grid-template-columns: 4.9rem minmax(0, 1fr) 12px minmax(0, 1fr) 48px; gap: 6px; align-items: center; }
+.lab { font-size: 0.78rem; color: var(--muted); line-height: 1.2; display: flex; flex-direction: column; }
+.lab b { color: var(--ink); font-weight: 600; }
+.pr { align-self: flex-start; margin-top: 2px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; padding: 1px 6px; border-radius: 99px; background: var(--good-soft); color: var(--good); }
+.set input { width: 100%; min-width: 0; height: 48px; border: 1px solid var(--line); background: var(--field); border-radius: 10px; padding: 0 6px; text-align: center; font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ex.complete .set input { background: var(--surface); }
+.set input::placeholder { color: var(--muted); opacity: 0.5; font-weight: 500; }
+.set .x { color: var(--muted); text-align: center; }
+.done { width: 48px; height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--field); display: grid; place-items: center; color: var(--muted); }
+.done svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.done[aria-pressed="true"] { background: var(--good); border-color: var(--good); color: var(--surface); }
+.done .lt { font-family: var(--display); font-weight: 800; font-size: 1.15rem; letter-spacing: 0.02em; }
+.done.half { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.session-note { margin-top: 6px; }
+.session-note label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
+textarea { width: 100%; min-height: 76px; resize: vertical; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; font-size: 0.95rem; }
+.finish { margin: 12px 0 0; text-align: center; font-size: 0.9rem; color: var(--good); font-weight: 600; }
+
+/* Tarjetas genéricas */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+.card h2 { margin: 0 0 10px; font-family: var(--display); font-size: 1.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; }
+.small { font-size: 0.85rem; color: var(--muted); margin: 0; }
+.empty { color: var(--muted); font-size: 0.92rem; margin: 0; }
+
+/* Progreso */
+.week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.wd { border-radius: 10px; padding: 8px 4px; text-align: center; background: var(--field); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wd b { font-family: var(--display); font-weight: 800; font-size: 1.1rem; text-transform: uppercase; }
+.wd span { font-size: 0.72rem; color: var(--muted); }
+.wd.on { background: var(--good-soft); }
+.wd.on span { color: var(--good); font-weight: 600; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat { min-width: 0; }
+.stat dt { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.stat dd { margin: 2px 0 0; font-family: var(--display); font-weight: 800; font-size: 1.5rem; line-height: 1.05; }
+.stat dd small { font-family: var(--body); font-weight: 500; font-size: 0.75rem; color: var(--muted); }
+select { width: 100%; min-height: 46px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 0 10px; }
+.seg { display: inline-flex; background: var(--field); border-radius: 99px; padding: 3px; gap: 2px; margin-bottom: 8px; }
+.seg button { border: 0; background: none; border-radius: 99px; min-height: 34px; padding: 0 12px; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .area { fill: var(--accent-soft); }
+.chart .ln { fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .pt { fill: var(--accent); }
+.chart .pt.last { fill: var(--surface); stroke: var(--accent); stroke-width: 2.6; }
+.chart text { fill: var(--muted); font-size: 10px; font-family: var(--body); font-variant-numeric: tabular-nums; }
+.chart text.hl { fill: var(--ink); font-weight: 700; font-size: 11px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.pill { display: inline-block; font-size: 0.68rem; font-weight: 600; padding: 1px 7px; border-radius: 99px; background: var(--warn-soft); color: var(--warn); margin-left: 4px; }
+
+/* Ajustes */
+.row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 4px 0; }
+.row + .row { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 8px; }
+.row div { min-width: 0; }
+.row b { display: block; font-weight: 600; }
+.toggle { position: relative; flex: none; width: 52px; height: 32px; }
+.toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.toggle span { position: absolute; inset: 0; border-radius: 99px; background: var(--line); pointer-events: none; }
+.toggle span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+.toggle input:checked + span { background: var(--accent); }
+.toggle input:checked + span::after { transform: translateX(20px); }
+.toggle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) { .toggle span::after { transition: transform 0.15s ease; } }
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.legend li { display: flex; gap: 12px; align-items: center; font-size: 0.92rem; }
+.legend li div { min-width: 0; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; min-height: 46px; padding: 0 18px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.btn.ghost { background: var(--field); color: var(--ink); border: 1px solid var(--line); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.92rem; display: flex; flex-direction: column; gap: 4px; }
+
+/* Dock inferior */
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: var(--dock); color: var(--dock-ink); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+.rest { position: relative; border-bottom: 1px solid rgba(127,127,127,0.25); }
+.rest-in { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 16px; }
+.rest-t { font-family: var(--display); font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 3.6ch; line-height: 1; }
+.rest-l { flex: 1; min-width: 0; font-size: 0.82rem; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rest-bar { position: absolute; left: 0; top: 0; height: 3px; background: var(--dock-accent); width: 0; }
+.rest button { flex: none; background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 8px; min-height: 40px; padding: 0 10px; font-size: 0.85rem; opacity: 0.9; }
+.rest.end { background: var(--good); color: var(--surface); }
+@media (prefers-reduced-motion: no-preference) { .rest-bar { transition: width 0.25s linear; } }
+.tabs { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); }
+.tab { background: none; border: 0; color: inherit; opacity: 0.6; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 4px 8px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; }
+.tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-current="page"] { opacity: 1; }
+.tab[aria-current="page"] svg { stroke: var(--dock-accent); }
+
+html { padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="bar" id="bar">
+    <div class="bar-top">
+      <p class="eyebrow" id="eyebrow">Hipertrofia · 8-12 reps</p>
+      <span class="status" id="status" data-s="local">En este móvil</span>
+    </div>
+    <div class="title-row">
+      <h1 id="title">Cuaderno</h1>
+      <div class="prog-txt num" id="progTxt"></div>
+    </div>
+    <div class="prog" id="prog" aria-hidden="true"><i id="progFill"></i></div>
+    <nav class="days" id="days" aria-label="Día de la rutina"></nav>
+  </header>
+
+  <main>
+    <section class="view" id="view-entreno">
+      <div class="toolbar">
+        <label for="date" class="small">Fecha</label>
+        <input type="date" id="date">
+        <button type="button" class="chip-btn" id="todayBtn" hidden>Volver a hoy</button>
+      </div>
+      <div id="backupBanner"></div>
+      <div id="deloadBanner"></div>
+      <div id="list"></div>
+      <div class="session-note">
+        <label for="note">Notas de la sesión</label>
+        <textarea id="note" placeholder="Sensaciones, sueño, molestias, cambios de máquina…"></textarea>
+      </div>
+      <p class="finish" id="finish" hidden></p>
+    </section>
+
+    <section class="view" id="view-progreso" hidden>
+      <div class="card">
+        <h2>Esta semana</h2>
+        <div class="week" id="week"></div>
+        <p class="small" id="weekTxt"></p>
+      </div>
+      <div class="card">
+        <h2>Por ejercicio</h2>
+        <label for="exSel" class="sr-label small">Ejercicio</label>
+        <select id="exSel"></select>
+        <div id="exOut" style="margin-top:12px"></div>
+      </div>
+      <div id="tableOut"></div>
+    </section>
+
+    <section class="view" id="view-ajustes" hidden>
+      <div class="card">
+        <h2>Entreno</h2>
+        <div class="row">
+          <div><b>Semana de descarga</b><p class="small">1 serie por ejercicio a RIR 2-3 con la carga habitual. No cuenta para la gráfica de progreso.</p></div>
+          <label class="toggle"><input type="checkbox" id="deload" aria-label="Semana de descarga"><span></span></label>
+        </div>
+        <div class="row">
+          <div><b>Sonido al acabar el descanso</b><p class="small">Pitido corto. En el iPhone suena con el modo silencio desactivado.</p></div>
+          <label class="toggle"><input type="checkbox" id="sound" aria-label="Sonido al acabar el descanso"><span></span></label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Tipos de serie</h2>
+        <ul class="legend">
+          <li><span class="tag A"><span>A</span></span><div><b>2 series:</b> RIR 1 y fallo. Máquinas y aislamiento.</div></li>
+          <li><span class="tag B"><span>B</span></span><div><b>2 series:</b> RIR 2 y RIR 1, sin fallo. Compuestos pesados.</div></li>
+          <li><span class="tag C"><span>C</span></span><div><b>3 series:</b> RIR 2, RIR 1 y fallo.</div></li>
+          <li><span class="tag F"><span>F</span></span><div><b>1 serie</b> al fallo.</div></li>
+        </ul>
+        <p class="small" style="margin-top:12px">Todas entre 8 y 12 reps. Al llegar a 12 en la serie al fallo, sube la carga y vuelve a 8-9.</p>
+        <p class="small" style="margin-top:8px">Los descansos son mínimos: al cumplirse suena el aviso y el contador sigue sumando hasta que cierres. En los unilaterales el check se pulsa dos veces (L1 y L2) y entre lados arranca un descanso de 60-90 s.</p>
+      </div>
+      <div class="card">
+        <h2>Copia de seguridad</h2>
+        <p class="small" style="margin-bottom:12px">Tus series se guardan solo en este móvil. Si borras la app o los datos de Safari sin copia, se pierden. Guarda la copia en Archivos o iCloud Drive.</p>
+        <div class="btns">
+          <button class="btn" id="backupBtn" type="button">Guardar copia</button>
+          <button class="btn ghost" id="csvBtn" type="button">Exportar a Excel</button>
+          <label class="btn ghost file" for="importFile">Restaurar copia</label>
+          <input type="file" id="importFile" accept=".json,.csv,application/json,text/csv" hidden>
+        </div>
+        <p class="small" id="backupInfo" style="margin-top:10px"></p>
+        <p class="small" id="exportMsg" role="status" style="margin-top:4px"></p>
+        <p class="small" style="margin-top:10px">«Restaurar copia» acepta la copia de esta app (.json) y el CSV que exportaba la versión de Claude. Las sesiones se suman a las que ya tienes; no se borra nada.</p>
+      </div>
+      <div class="card">
+        <h2>Instalar en el iPhone</h2>
+        <ol class="steps">
+          <li>Abre esta página en Safari.</li>
+          <li>Pulsa Compartir y luego «Añadir a pantalla de inicio».</li>
+          <li>Ábrela siempre desde ese icono: los datos de la app instalada y los de Safari están separados.</li>
+        </ol>
+        <p class="small" style="margin-top:10px">Funciona sin cobertura. Cuando haya una versión nueva se carga sola al abrirla con conexión.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="dock" id="dock">
+  <div class="rest" id="rest" hidden>
+    <div class="rest-bar" id="restBar"></div>
+    <div class="rest-in">
+      <div class="rest-t" id="restT">0:00</div>
+      <div class="rest-l" id="restL">Descanso</div>
+      <button type="button" id="restMinus">−15 s</button>
+      <button type="button" id="restPlus">+15 s</button>
+      <button type="button" id="restStop" aria-label="Cerrar temporizador">✕</button>
+    </div>
+  </div>
+  <nav class="tabs" aria-label="Secciones">
+    <button class="tab" type="button" data-view="entreno"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4M6.5 7v10M17.5 7v10M21 10v4M6.5 12h11"/></svg>Entreno</button>
+    <button class="tab" type="button" data-view="progreso"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M5 15l4.5-4.5 3.5 3L19 7"/></svg>Progreso</button>
+    <button class="tab" type="button" data-view="ajustes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Ajustes</button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* Rutina. A = RIR 1 + fallo. B = RIR 2 + RIR 1. C = RIR 2 + RIR 1 + fallo. F = 1 al fallo. */
+  const SETS = { A: ["RIR 1", "Fallo"], B: ["RIR 2", "RIR 1"], C: ["RIR 2", "RIR 1", "Fallo"], F: ["Fallo"] };
+  const DAYS = [
+    { k: "mon", ab: "Lun", short: "Tirón", name: "Tirón", ex: [
+      { id: "jalon-neutro", n: "Jalón al pecho, agarre neutro", c: "A", rest: 150 },
+      { id: "remo-unilateral", n: "Remo unilateral", c: "A", rest: 150, uni: true },
+      { id: "remo-alto-polea", n: "Remo alto en polea, agarre prono", c: "A", rest: 150 },
+      { id: "remo-t", n: "Remo en T / alto en máquina", c: "A", rest: 150 },
+      { id: "deltoide-posterior", n: "Deltoide posterior", c: "A", rest: 105 },
+      { id: "curl-alterno-pie", n: "Curl alterno de pie con mancuernas", c: "A", rest: 105 },
+      { id: "martillo-banco", n: "Curl martillo en banco", c: "A", rest: 105 },
+      { id: "femoral-sentado", n: "Femoral sentado", c: "C", rest: 105 },
+      { id: "abductor", n: "Abductor", c: "A", rest: 90 }
+    ] },
+    { k: "tue", ab: "Mar", short: "Empuje", name: "Empuje", ex: [
+      { id: "press-inclinado", n: "Press inclinado en multipower", c: "B", rest: 180 },
+      { id: "militar-multipower", n: "Militar en multipower", c: "B", rest: 180 },
+      { id: "aperturas-maquina", n: "Aperturas de pecho en máquina", c: "A", rest: 105 },
+      { id: "laterales-maquina", n: "Laterales en máquina", c: "A", rest: 90 },
+      { id: "laterales-mancuerna", n: "Elevaciones laterales con mancuerna", c: "A", rest: 90 },
+      { id: "triceps-polea-jalon", n: "Tríceps en polea, agarre jalón, espalda apoyada", c: "A", rest: 105 },
+      { id: "triceps-tras-nuca", n: "Tríceps tras nuca en polea", c: "A", rest: 105 },
+      { id: "crunch-maquina", n: "Crunch abdominal en máquina", c: "A", rest: 90 }
+    ] },
+    { k: "thu", ab: "Jue", short: "Pierna", name: "Pierna", ex: [
+      { id: "belt-squat", n: "Belt squat", c: "B", rest: 180 },
+      { id: "prensa-unilateral", n: "Prensa unilateral hammer", c: "B", rest: 180, uni: true },
+      { id: "extension-cuadriceps", n: "Extensión de cuádriceps", c: "C", rest: 105 },
+      { id: "abductor", n: "Abductor", c: "C", rest: 90 },
+      { id: "femoral-tumbado", n: "Femoral tumbado", c: "C", rest: 105 },
+      { id: "gemelo-pie", n: "Gemelo de pie", c: "A", rest: 105, note: "Recorrido completo y pausa de 1 a 2 s abajo." }
+    ] },
+    { k: "fri", ab: "Vie", short: "Espalda", name: "Espalda y brazos", ex: [
+      { id: "pullover-polea", n: "Pullover en polea", c: "A", rest: 105, note: "Antes, 1 serie ligera de aproximación. No la anotes." },
+      { id: "remo-bajo", n: "Remo bajo en polea", c: "A", rest: 150 },
+      { id: "curl-polea", n: "Curl de bíceps en polea", c: "A", rest: 105 },
+      { id: "bayesian", n: "Curl bayesian", c: "A", rest: 105, uni: true },
+      { id: "martillo-pared", n: "Curl martillo apoyado en pared", c: "A", rest: 105 },
+      { id: "triceps-unilateral", n: "Tríceps en polea unilateral, codo apoyado", c: "A", rest: 105, uni: true },
+      { id: "triceps-tras-nuca", n: "Tríceps tras nuca en polea", c: "A", rest: 105 },
+      { id: "fondos-lastrados", n: "Fondos lastrados", c: "F", rest: 150 }
+    ] },
+    { k: "sat", ab: "Sáb", short: "Hombro", name: "Abs y hombro", ex: [
+      { id: "militar-maquina", n: "Militar en máquina", c: "B", rest: 180, note: "Primero, con el tríceps descansado." },
+      { id: "crunch-polea", n: "Crunch abdominal en polea", c: "A", rest: 90 },
+      { id: "deltoide-posterior", n: "Deltoide posterior", c: "A", rest: 105 },
+      { id: "laterales-maquina", n: "Laterales en máquina", c: "A", rest: 90 },
+      { id: "laterales-mancuerna", n: "Elevaciones laterales con mancuerna", c: "A", rest: 90 },
+      { id: "femoral-sentado", n: "Femoral sentado", c: "A", rest: 105 },
+      { id: "gemelo-pie", n: "Gemelo de pie", c: "A", rest: 105, note: "Recorrido completo y pausa de 1 a 2 s abajo." }
+    ] }
+  ];
+  const DAY_BY_KEY = Object.fromEntries(DAYS.map(d => [d.k, d]));
+  const NAMES = {};
+  DAYS.forEach(d => d.ex.forEach(e => { NAMES[e.id] = e.n; }));
+  const DOW = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+  const MON = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const pad = n => String(n).padStart(2, "0");
+  const isoOf = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const todayISO = () => isoOf(new Date());
+  const parseISO = iso => { const p = iso.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+  const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : null; };
+  const fmt = n => String(Math.round(n * 100) / 100).replace(".", ",");
+  const dmy = iso => { const p = iso.split("-"); return p[2] + "/" + p[1]; };
+  const longDate = iso => { const d = parseISO(iso); return DOW[d.getDay()] + " " + d.getDate() + " " + MON[d.getMonth()]; };
+  const mmss = s => Math.floor(s / 60) + ":" + pad(s % 60);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const e1rm = (w, r) => (w > 0 && r > 0 && r <= 20) ? w * (1 + r / 30) : null;
+  const ls = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Estado */
+  const LS_KEY = "cc-sessions-v1", LS_DELOAD = "cc-deload", LS_SOUND = "cc-sound", LS_EX = "cc-ex";
+  const state = {
+    day: ({ 1: "mon", 2: "tue", 3: "thu", 4: "thu", 5: "fri", 6: "sat", 0: "mon" })[new Date().getDay()],
+    date: todayISO(),
+    deload: false,
+    view: "entreno",
+    metric: "w",
+    sessions: new Map(),
+    cur: {},
+    note: "",
+    open: {},
+    half: {},
+    rev: 0,
+    savedRev: 0
+  };
+  let col = null, useLocal = false, saveTimer = null, slowTimer = null, chain = Promise.resolve();
+  let soundOn = ls.get(LS_SOUND) !== "0";
+
+  (function () {
+    const stored = ls.get(LS_DELOAD);
+    if (stored === "1" || stored === "0") state.deload = stored === "1";
+    else state.deload = state.date >= "2026-11-09" && state.date <= "2026-11-15";
+  })();
+
+  const sessionId = () => "s-" + state.date + "-" + state.day;
+  const dayData = () => DAY_BY_KEY[state.day];
+  const setsFor = e => state.deload ? ["RIR 2-3"] : SETS[e.c];
+
+  function setStatus(s) {
+    const map = { connecting: "Conectando", ok: "Guardado en tu cuenta", pending: "Guardando…", local: "Guardado en este móvil", slow: "Sin respuesta de la cuenta", err: "No se pudo guardar" };
+    const el = $("#status");
+    el.dataset.s = s === "pending" || s === "connecting" ? "" : s;
+    el.textContent = map[s] || "";
+  }
+
+  /* Sesión actual */
+  function loadSession() {
+    const doc = state.sessions.get(sessionId());
+    state.cur = {};
+    dayData().ex.forEach(e => {
+      const n = SETS[e.c].length;
+      const src = (doc && doc.ex && doc.ex[e.id]) || [];
+      state.cur[e.id] = Array.from({ length: n }, (_, i) => {
+        const s = src[i] || {};
+        return { w: s.w == null ? "" : fmt(s.w), r: s.r == null ? "" : String(s.r), d: !!s.d };
+      });
+    });
+    if (doc && typeof doc.deload === "boolean") state.deload = doc.deload;
+    state.note = (doc && typeof doc.note === "string") ? doc.note : "";
+    $("#deload").checked = state.deload;
+    const n = $("#note");
+    if (document.activeElement !== n) n.value = state.note;
+  }
+
+  function buildDoc() {
+    const ex = {};
+    let any = false;
+    dayData().ex.forEach(e => {
+      const arr = (state.cur[e.id] || []).map(s => ({ w: num(s.w), r: num(s.r), d: !!s.d }));
+      if (arr.some(s => s.w !== null || s.r !== null || s.d)) { ex[e.id] = arr; any = true; }
+    });
+    const note = state.note.trim();
+    if (!any && !note) return null;
+    const d = { date: state.date, day: state.day, deload: state.deload, ex: ex, upd: Date.now() };
+    if (note) d.note = state.note;
+    return d;
+  }
+
+  /* Guardado: una escritura cada vez, en orden */
+  function write(id, d, rev) {
+    if (col && !useLocal) {
+      if (d) return col.doc(id).set(d).then(() => { state.sessions.set(id, d); state.savedRev = Math.max(state.savedRev, rev); });
+      if (state.sessions.has(id)) return col.doc(id).delete().then(() => { state.sessions.delete(id); state.savedRev = Math.max(state.savedRev, rev); });
+      state.savedRev = Math.max(state.savedRev, rev);
+      return Promise.resolve();
+    }
+    if (d) state.sessions.set(id, d); else state.sessions.delete(id);
+    const obj = {};
+    state.sessions.forEach((v, k) => { obj[k] = v; });
+    ls.set(LS_KEY, JSON.stringify(obj));
+    state.savedRev = Math.max(state.savedRev, rev);
+    return Promise.resolve();
+  }
+  function save() {
+    const id = sessionId(), d = buildDoc(), rev = state.rev;
+    chain = chain.then(() => write(id, d, rev)).then(() => {
+      if (state.savedRev === state.rev) setStatus(useLocal ? "local" : "ok");
+      renderDays();
+      renderBackupInfo();
+      if (state.view === "progreso") renderProgress();
+    }, () => { setStatus("err"); });
+    return chain;
+  }
+  function touch() {
+    state.rev++;
+    setStatus("pending");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 600);
+  }
+  function flush() {
+    clearTimeout(saveTimer);
+    if (state.savedRev !== state.rev) return save();
+    return chain;
+  }
+
+  /* Referencias del historial */
+  function lastFor(exId) {
+    const curId = sessionId();
+    let best = null;
+    state.sessions.forEach((doc, id) => {
+      if (id === curId || !doc || !doc.ex || !doc.ex[exId] || doc.date > state.date) return;
+      const sets = doc.ex[exId].filter(s => s.w != null || s.r != null);
+      if (!sets.length) return;
+      if (!best || doc.date > best.doc.date || (doc.date === best.doc.date && (doc.upd || 0) > (best.doc.upd || 0))) best = { doc, sets };
+    });
+    return best;
+  }
+  function bestBefore(exId) {
+    const curId = sessionId();
+    let best = 0;
+    state.sessions.forEach((doc, id) => {
+      if (id === curId || !doc || doc.deload || !doc.ex || !doc.ex[exId] || doc.date > state.date) return;
+      doc.ex[exId].forEach(s => { const v = e1rm(s.w, s.r); if (v && v > best) best = v; });
+    });
+    return best;
+  }
+  const setText = s => (s.w != null ? fmt(s.w) : "?") + "×" + (s.r != null ? s.r : "?");
+  function suggestion(last) {
+    let top = null;
+    for (let i = last.sets.length - 1; i >= 0; i--) { if (last.sets[i].r != null) { top = last.sets[i]; break; } }
+    if (!top) return "";
+    if (state.deload) return "Descarga: usa una carga que te deje 2-3 reps en recámara.";
+    if (last.doc.deload) return "Vienes de descarga. Parte de esa carga y busca el fallo entre 8 y 12.";
+    const w = top.w != null ? fmt(top.w) + " kg" : "el mismo peso";
+    if (top.r >= 12) return "Hiciste " + top.r + " reps con " + w + ". Sube la carga y vuelve a 8-9.";
+    if (top.r < 8) return "Mantén " + w + " y busca llegar a 8 reps.";
+    return "Mantén " + w + " y busca " + (top.r + 1) + " reps en la última serie.";
+  }
+
+  function exStats(e) {
+    const total = setsFor(e).length;
+    const done = state.cur[e.id].slice(0, total).filter(s => s.d).length;
+    return { total, done, complete: done === total };
+  }
+  function nextId() {
+    const ex = dayData().ex;
+    for (let i = 0; i < ex.length; i++) if (!exStats(ex[i]).complete) return ex[i].id;
+    return null;
+  }
+
+  /* Interfaz de entreno */
+  const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  function cardHTML(e) {
+    const labels = setsFor(e);
+    const st = exStats(e);
+    const open = state.open[e.id] !== undefined ? state.open[e.id] : !st.complete;
+    const last = lastFor(e.id);
+    const best = bestBefore(e.id);
+    const isNext = e.id === nextId();
+    const sub = labels.length + (labels.length === 1 ? " serie" : " series") + (e.uni ? " por lado" : "") + " · descanso mín. " + mmss(e.rest);
+    const count = st.complete ? '<span class="count ok" aria-label="Completado">' + CHECK + "</span>" : '<span class="count num">' + st.done + "/" + st.total + "</span>";
+    let body = "";
+    if (open) {
+      const lastTxt = last
+        ? "Última vez · " + dmy(last.doc.date) + (last.doc.deload ? " (descarga)" : "") + ": <b class=\"num\">" + last.sets.map(setText).join(" · ") + "</b>"
+        : "Primera vez: anota el peso con el que empiezas.";
+      const sugg = last ? suggestion(last) : "";
+      const rows = labels.map((lab, i) => {
+        const s = state.cur[e.id][i];
+        const ref = last && (last.sets[i] || last.sets[last.sets.length - 1]);
+        const v = e1rm(num(s.w), num(s.r));
+        const pr = best > 0 && v && v > best + 0.01;
+        const half = !s.d && !!state.half[sessionId() + "-" + e.id + "-" + i];
+        const doneIcon = s.d || !e.uni ? CHECK : '<span class="lt">' + (half ? "L2" : "L1") + "</span>";
+        const doneLabel = e.uni && !s.d ? (half ? "Marcar segundo lado, serie " : "Marcar primer lado, serie ") + (i + 1) : "Marcar serie " + (i + 1) + " hecha";
+        return '<div class="set" data-row="' + i + '">' +
+          '<span class="lab"><b>Serie ' + (i + 1) + "</b>" + esc(lab) + (pr ? '<span class="pr">RÉCORD</span>' : "") + "</span>" +
+          '<input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" id="w-' + e.id + "-" + i + '" data-ex="' + e.id + '" data-i="' + i + '" data-k="w" placeholder="' + (ref && ref.w != null ? fmt(ref.w) : "kg") + '" value="' + esc(s.w) + '" aria-label="Kilos, serie ' + (i + 1) + '">' +
+          '<span class="x" aria-hidden="true">×</span>' +
+          '<input type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off" id="r-' + e.id + "-" + i + '" data-ex="' + e.id + '" data-i="' + i + '" data-k="r" placeholder="' + (ref && ref.r != null ? ref.r : "reps") + '" value="' + esc(s.r) + '" aria-label="Repeticiones, serie ' + (i + 1) + '">' +
+          '<button type="button" class="done' + (half ? " half" : "") + '" data-done data-ex="' + e.id + '" data-i="' + i + '" aria-pressed="' + s.d + '" aria-label="' + doneLabel + '">' + doneIcon + "</button></div>";
+      }).join("");
+      body = '<div class="ex-body" id="body-' + e.id + '">' +
+        '<div class="last-row"><p class="last">' + lastTxt + "</p>" + (last ? '<button type="button" class="link" data-copy>Usar sus pesos</button>' : "") + "</div>" +
+        (sugg ? '<p class="sugg">' + esc(sugg) + "</p>" : "") +
+        '<div class="sets">' + rows + "</div>" +
+        (e.note ? '<p class="note">' + esc(e.note) + "</p>" : "") + "</div>";
+    }
+    return '<article class="ex' + (isNext ? " next" : "") + (st.complete ? " complete" : "") + '" data-card="' + e.id + '">' +
+      '<button type="button" class="ex-head" data-toggle aria-expanded="' + open + '"' + (open ? ' aria-controls="body-' + e.id + '"' : "") + ">" +
+      '<span class="tag ' + e.c + '" aria-label="Tipo ' + e.c + '"><span>' + e.c + "</span></span>" +
+      '<span class="ex-title"><h3>' + esc(e.n) + '</h3><span class="ex-sub">' + sub + "</span></span>" + count + "</button>" + body + "</article>";
+  }
+  function renderCard(id) {
+    const e = dayData().ex.find(x => x.id === id);
+    const el = $('[data-card="' + id + '"]');
+    if (e && el) el.outerHTML = cardHTML(e);
+  }
+  function renderList() {
+    $("#list").innerHTML = dayData().ex.map(cardHTML).join("");
+    renderBanner();
+    renderHeader();
+  }
+  function refreshNextMarks() {
+    const nid = nextId();
+    $$("[data-card]").forEach(el => el.classList.toggle("next", el.dataset.card === nid));
+  }
+
+  function weekRange(iso) {
+    const d = parseISO(iso);
+    const dow = (d.getDay() + 6) % 7;
+    const mon = new Date(d); mon.setDate(d.getDate() - dow);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return [isoOf(mon), isoOf(sun)];
+  }
+  function weekDone(iso) {
+    const [a, b] = weekRange(iso);
+    const out = {};
+    state.sessions.forEach(doc => {
+      if (!doc || doc.date < a || doc.date > b || !doc.ex) return;
+      let n = 0;
+      Object.keys(doc.ex).forEach(k => doc.ex[k].forEach(s => { if (s.d) n++; }));
+      if (n) out[doc.day] = (out[doc.day] || 0) + n;
+    });
+    return out;
+  }
+  function renderDays() {
+    const wd = weekDone(state.date);
+    $("#days").innerHTML = DAYS.map(d =>
+      '<button type="button" class="day" data-day="' + d.k + '" aria-pressed="' + (d.k === state.day) + '" aria-label="' + d.ab + ", " + d.name + (wd[d.k] ? ", hecho esta semana" : "") + '"><b>' + d.ab + "</b><span>" + d.short + "</span>" + (wd[d.k] ? '<i class="dot" aria-hidden="true"></i>' : "") + "</button>"
+    ).join("");
+  }
+  function renderHeader() {
+    const v = state.view;
+    const entreno = v === "entreno";
+    $("#days").hidden = !entreno;
+    $("#prog").hidden = !entreno;
+    $("#progTxt").hidden = !entreno;
+    if (entreno) {
+      const d = dayData();
+      let done = 0, total = 0;
+      d.ex.forEach(e => { const s = exStats(e); done += s.done; total += s.total; });
+      $("#title").textContent = d.name;
+      $("#eyebrow").textContent = longDate(state.date) + (state.deload ? " · descarga" : " · 8-12 reps");
+      $("#progTxt").innerHTML = "<b>" + done + "</b> / " + total + " series";
+      $("#progFill").style.width = (total ? 100 * done / total : 0) + "%";
+      $("#prog").classList.toggle("full", total > 0 && done === total);
+      const fin = $("#finish");
+      fin.hidden = !(total > 0 && done === total);
+      fin.textContent = "Sesión completa. Buen trabajo.";
+    } else {
+      $("#title").textContent = v === "progreso" ? "Progreso" : "Ajustes";
+      $("#eyebrow").textContent = "Cuaderno de cargas";
+    }
+    $("#todayBtn").hidden = state.date === todayISO();
+  }
+  function renderBanner() {
+    $("#deloadBanner").innerHTML = state.deload
+      ? '<div class="banner"><p><b>Semana de descarga</b>1 serie por ejercicio a RIR 2-3. Anota el peso para calibrar la semana siguiente.</p><button type="button" id="deloadOff">Desactivar</button></div>'
+      : "";
+  }
+  function setDeload(on) {
+    state.deload = on;
+    ls.set(LS_DELOAD, on ? "1" : "0");
+    $("#deload").checked = on;
+    state.open = {};
+    renderList();
+    touch();
+  }
+
+  /* Eventos de entreno */
+  $("#days").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-day]");
+    if (!b || b.dataset.day === state.day) return;
+    flush().then(() => { state.day = b.dataset.day; state.open = {}; renderDays(); loadSession(); renderList(); window.scrollTo(0, 0); });
+  });
+  $("#date").addEventListener("change", ev => {
+    if (!ev.target.value) return;
+    flush().then(() => { state.date = ev.target.value; state.open = {}; loadSession(); renderDays(); renderList(); });
+  });
+  $("#todayBtn").addEventListener("click", () => {
+    flush().then(() => { state.date = todayISO(); $("#date").value = state.date; state.open = {}; loadSession(); renderDays(); renderList(); });
+  });
+  $("#deloadBanner").addEventListener("click", ev => { if (ev.target.closest("#deloadOff")) setDeload(false); });
+  $("#deload").addEventListener("change", ev => setDeload(ev.target.checked));
+  $("#note").addEventListener("input", ev => { state.note = ev.target.value; touch(); });
+
+  $("#list").addEventListener("input", ev => {
+    const t = ev.target;
+    if (!t.dataset || !t.dataset.k) return;
+    const s = state.cur[t.dataset.ex][+t.dataset.i];
+    s[t.dataset.k] = t.value;
+    const row = t.closest(".set");
+    const best = bestBefore(t.dataset.ex);
+    const v = e1rm(num(s.w), num(s.r));
+    const pr = best > 0 && v && v > best + 0.01;
+    const lab = $(".lab", row);
+    const badge = $(".pr", lab);
+    if (pr && !badge) lab.insertAdjacentHTML("beforeend", '<span class="pr">RÉCORD</span>');
+    if (!pr && badge) badge.remove();
+    touch();
+  });
+  $("#list").addEventListener("keydown", ev => {
+    const t = ev.target;
+    if (ev.key !== "Enter" || !t.dataset || !t.dataset.k) return;
+    ev.preventDefault();
+    const inputs = $$("#list input");
+    const i = inputs.indexOf(t);
+    if (i >= 0 && i < inputs.length - 1) inputs[i + 1].focus(); else t.blur();
+  });
+  $("#list").addEventListener("click", ev => {
+    const card = ev.target.closest("[data-card]");
+    if (!card) return;
+    const id = card.dataset.card;
+    const e = dayData().ex.find(x => x.id === id);
+
+    if (ev.target.closest("[data-toggle]")) {
+      const st = exStats(e);
+      const open = state.open[id] !== undefined ? state.open[id] : !st.complete;
+      state.open[id] = !open;
+      renderCard(id);
+      return;
+    }
+    if (ev.target.closest("[data-copy]")) {
+      const last = lastFor(id);
+      if (!last) return;
+      state.cur[id].forEach((s, i) => {
+        const src = last.sets[i] || last.sets[last.sets.length - 1];
+        if (!s.w && src && src.w != null) { s.w = fmt(src.w); const inp = $("#w-" + id + "-" + i); if (inp) inp.value = s.w; }
+      });
+      touch();
+      return;
+    }
+    const b = ev.target.closest("[data-done]");
+    if (!b) return;
+    const i = +b.dataset.i;
+    const s = state.cur[id][i];
+    if (!s.d) {
+      /* Al marcar una serie vacía se rellena con lo de la serie anterior o con lo de la última vez. */
+      const last = lastFor(id);
+      const ref = last && (last.sets[i] || last.sets[last.sets.length - 1]);
+      const prev = i > 0 ? state.cur[id][i - 1] : null;
+      if (s.w === "") { if (prev && prev.w !== "") s.w = prev.w; else if (ref && ref.w != null) s.w = fmt(ref.w); }
+      if (s.r === "" && ref && ref.r != null) s.r = String(ref.r);
+    }
+    const hk = sessionId() + "-" + id + "-" + i;
+    if (!s.d && e.uni && !state.half[hk]) {
+      /* Unilateral: primer toque = primer lado hecho y descanso entre lados. */
+      state.half[hk] = true;
+      touch();
+      renderCard(id);
+      startRest(e.rest >= 150 ? 90 : 60, "Entre lados: " + e.n);
+      return;
+    }
+    delete state.half[hk];
+    s.d = !s.d;
+    const wasComplete = state.open[id] === undefined;
+    delete state.open[id];
+    touch();
+    const st = exStats(e);
+    renderCard(id);
+    refreshNextMarks();
+    renderHeader();
+    if (s.d) {
+      const nid = nextId();
+      if (nid === null) { stopRest(); return; }
+      startRest(e.rest, st.complete ? "Siguiente: " + NAMES[nid] : e.n);
+      if (st.complete && wasComplete) {
+        const nextCard = $('[data-card="' + nid + '"]');
+        if (nextCard) nextCard.scrollIntoView({ block: "start", behavior: reduced() ? "auto" : "smooth" });
+      }
+    }
+  });
+
+  /* Vistas */
+  const VIEWS = ["entreno", "progreso", "ajustes"];
+  function showView(v) {
+    if (VIEWS.indexOf(v) < 0) v = "entreno";
+    state.view = v;
+    VIEWS.forEach(x => { $("#view-" + x).hidden = x !== v; });
+    $$(".tab").forEach(t => { if (t.dataset.view === v) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current"); });
+    renderHeader();
+    if (v === "progreso") renderProgress();
+    window.scrollTo(0, 0);
+  }
+  $$(".tab").forEach(t => t.addEventListener("click", () => {
+    const v = t.dataset.view;
+    flush().then(() => { if (location.hash !== "#" + v) location.hash = v; else showView(v); });
+  }));
+  window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
+
+  /* Progreso */
+  (function () {
+    const seen = {};
+    $("#exSel").innerHTML = DAYS.map(d => {
+      const opts = d.ex.filter(e => !seen[e.id] && (seen[e.id] = 1)).map(e => '<option value="' + e.id + '">' + esc(e.n) + "</option>").join("");
+      return opts ? '<optgroup label="' + d.ab + " · " + d.name + '">' + opts + "</optgroup>" : "";
+    }).join("");
+    const saved = ls.get(LS_EX);
+    if (saved && NAMES[saved]) $("#exSel").value = saved;
+  })();
+  $("#exSel").addEventListener("change", ev => { ls.set(LS_EX, ev.target.value); renderProgress(); });
+  $("#exOut").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-metric]");
+    if (!b) return;
+    state.metric = b.dataset.metric;
+    renderProgress();
+  });
+
+  function chart(points, unit) {
+    const W = 340, H = 160, L = 38, R = 12, T = 18, B = 24;
+    const ys = points.map(q => q.y);
+    let min = Math.min.apply(null, ys), max = Math.max.apply(null, ys);
+    if (min === max) { min -= 2.5; max += 2.5; }
+    const span = max - min; min -= span * 0.08; max += span * 0.08;
+    const sx = i => L + (W - L - R) * (points.length === 1 ? 0.5 : i / (points.length - 1));
+    const sy = y => T + (H - T - B) * (1 - (y - min) / (max - min));
+    const ticks = [min + (max - min) * 0.1, (min + max) / 2, max - (max - min) * 0.1];
+    let g = ticks.map(t => '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + sy(t).toFixed(1) + '" y2="' + sy(t).toFixed(1) + '"/><text x="' + (L - 6) + '" y="' + (sy(t) + 3.5).toFixed(1) + '" text-anchor="end">' + fmt(Math.round(t)) + "</text>").join("");
+    const line = points.map((q, i) => (i ? "L" : "M") + sx(i).toFixed(1) + " " + sy(q.y).toFixed(1)).join(" ");
+    const area = line + " L" + sx(points.length - 1).toFixed(1) + " " + (H - B) + " L" + sx(0).toFixed(1) + " " + (H - B) + " Z";
+    const dots = points.map((q, i) => '<circle class="pt' + (i === points.length - 1 ? " last" : "") + '" cx="' + sx(i).toFixed(1) + '" cy="' + sy(q.y).toFixed(1) + '" r="' + (i === points.length - 1 ? 4.5 : 3) + '"/>').join("");
+    const lp = points[points.length - 1];
+    const lx = sx(points.length - 1), ly = sy(lp.y);
+    g += '<text x="' + sx(0).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + (points.length === 1 ? "middle" : "start") + '">' + dmy(points[0].date) + "</text>";
+    if (points.length > 1) g += '<text x="' + lx.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="end">' + dmy(lp.date) + "</text>";
+    return '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Evolución por sesión, último valor ' + fmt(lp.y) + " " + unit + '">' + g +
+      '<path class="area" d="' + area + '"/><path class="ln" d="' + line + '"/>' + dots +
+      '<text class="hl" x="' + Math.min(lx, W - R).toFixed(1) + '" y="' + Math.max(ly - 10, 11).toFixed(1) + '" text-anchor="end">' + fmt(lp.y) + " " + unit + "</text></svg>";
+  }
+
+  function renderProgress() {
+    /* Semana */
+    const [a, b] = weekRange(state.date);
+    const wd = weekDone(state.date);
+    $("#week").innerHTML = DAYS.map(d => '<div class="wd' + (wd[d.k] ? " on" : "") + '"><b>' + d.ab + "</b><span>" + (wd[d.k] ? wd[d.k] + (wd[d.k] === 1 ? " serie" : " series") : d.short) + "</span></div>").join("");
+    const sessions = Object.keys(wd).length;
+    const sets = Object.values(wd).reduce((x, y) => x + y, 0);
+    $("#weekTxt").textContent = "Del " + longDate(a) + " al " + longDate(b) + ": " + sessions + " de 5 sesiones, " + sets + (sets === 1 ? " serie hecha." : " series hechas.");
+
+    /* Ejercicio */
+    const id = $("#exSel").value;
+    const rows = [];
+    state.sessions.forEach(doc => {
+      if (doc && doc.ex && doc.ex[id]) {
+        const s = doc.ex[id].filter(x => x.w != null || x.r != null);
+        if (s.length) rows.push({ doc, sets: s });
+      }
+    });
+    rows.sort((x, y) => x.doc.date < y.doc.date ? -1 : x.doc.date > y.doc.date ? 1 : (x.doc.upd || 0) - (y.doc.upd || 0));
+    if (!rows.length) {
+      $("#exOut").innerHTML = '<p class="empty">Aún no hay series de este ejercicio. Anótalas en Entreno y aparecerán aquí con su gráfica.</p>';
+      $("#tableOut").innerHTML = "";
+      return;
+    }
+    let bestSet = null, bestE = 0;
+    const pts = [];
+    rows.forEach(r => {
+      if (r.doc.deload) return;
+      let mw = null, me = null;
+      r.sets.forEach(s => {
+        if (s.w != null && (mw === null || s.w > mw)) mw = s.w;
+        const v = e1rm(s.w, s.r);
+        if (v && (me === null || v > me)) me = v;
+        if (v && v > bestE) { bestE = v; bestSet = s; }
+      });
+      const y = state.metric === "e" ? me : mw;
+      if (y != null) pts.push({ y: Math.round(y * 10) / 10, date: r.doc.date });
+    });
+    let html = '<dl class="stats">' +
+      '<div class="stat"><dt>Mejor serie</dt><dd class="num">' + (bestSet ? fmt(bestSet.w) + "<small> kg × " + bestSet.r + "</small>" : "–") + "</dd></div>" +
+      '<div class="stat"><dt>1RM estimado</dt><dd class="num">' + (bestE ? fmt(Math.round(bestE)) + "<small> kg</small>" : "–") + "</dd></div>" +
+      '<div class="stat"><dt>Sesiones</dt><dd class="num">' + rows.length + "</dd></div></dl>";
+    html += '<div style="margin-top:14px"><div class="seg" role="group" aria-label="Métrica de la gráfica"><button type="button" data-metric="w" aria-pressed="' + (state.metric === "w") + '">Carga máxima</button><button type="button" data-metric="e" aria-pressed="' + (state.metric === "e") + '">1RM estimado</button></div>';
+    html += pts.length ? chart(pts, "kg") : '<p class="empty">Las sesiones de descarga no entran en la gráfica.</p>';
+    html += '<p class="small" style="margin-top:6px">1RM estimado con la fórmula de Epley: kg × (1 + reps / 30). Sirve para comparar sesiones con reps distintas.</p></div>';
+    $("#exOut").innerHTML = html;
+    $("#tableOut").innerHTML = '<div class="card"><h2>Sesiones</h2><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Series (kg × reps)</th></tr></thead><tbody>' +
+      rows.slice().reverse().map(r => "<tr><td>" + dmy(r.doc.date) + (r.doc.deload ? '<span class="pill">descarga</span>' : "") + "</td><td>" + r.sets.map(setText).join(" · ") + (r.doc.note ? '<br><span class="small">' + esc(r.doc.note) + "</span>" : "") + "</td></tr>").join("") +
+      "</tbody></table></div></div>";
+  }
+
+  /* Copia de seguridad */
+  const LS_BACKUP = "cc-last-backup";
+  function offerFile(name, text, type) {
+    const blob = new Blob([text], { type });
+    let file = null;
+    try { file = new File([blob], name, { type }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      return navigator.share({ files: [file], title: name }).then(() => "ok", e => (e && e.name === "AbortError") ? "cancel" : fallback());
+    }
+    return Promise.resolve(fallback());
+    function fallback() {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      return "ok";
+    }
+  }
+  function daysSince(iso) { return iso ? Math.floor((parseISO(todayISO()) - parseISO(iso)) / 86400000) : null; }
+  function renderBackupInfo() {
+    const last = ls.get(LS_BACKUP);
+    const n = state.sessions.size;
+    $("#backupInfo").textContent = n + (n === 1 ? " sesión guardada" : " sesiones guardadas") + " · última copia: " + (last ? dmy(last) + "/" + last.slice(0, 4) : "nunca");
+    const d = daysSince(last);
+    const need = n >= 2 && (d === null || d >= 7);
+    $("#backupBanner").innerHTML = need
+      ? '<div class="banner"><p><b>Haz una copia de seguridad</b>' + (d === null ? "Aún no tienes ninguna." : "La última es de hace " + d + " días.") + '</p><button type="button" id="goBackup">Hacerla</button></div>'
+      : "";
+  }
+  $("#backupBanner").addEventListener("click", ev => { if (ev.target.closest("#goBackup")) location.hash = "ajustes"; });
+  $("#backupBtn").addEventListener("click", () => {
+    const msg = $("#exportMsg");
+    flush().then(() => {
+      if (!state.sessions.size) { msg.textContent = "Aún no hay series para guardar."; return; }
+      const obj = {};
+      state.sessions.forEach((v, k) => { obj[k] = v; });
+      const data = JSON.stringify({ app: "cuaderno-de-cargas", version: 1, exported: new Date().toISOString(), sessions: obj });
+      return offerFile("cuaderno-de-cargas-" + todayISO() + ".json", data, "application/json").then(r => {
+        if (r === "cancel") { msg.textContent = "Copia cancelada."; return; }
+        ls.set(LS_BACKUP, todayISO());
+        msg.textContent = "Copia lista. Guárdala en Archivos o iCloud Drive.";
+        renderBackupInfo();
+      });
+    }).catch(() => { msg.textContent = "No se pudo crear la copia. Inténtalo de nuevo."; });
+  });
+  $("#csvBtn").addEventListener("click", () => {
+    const msg = $("#exportMsg");
+    flush().then(() => {
+      const ids = Array.from(state.sessions.keys()).sort();
+      if (!ids.length) { msg.textContent = "Aún no hay series para exportar."; return; }
+      const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+      const lines = ["fecha;dia;descarga;ejercicio;serie;kg;reps;hecha;nota_sesion"];
+      ids.forEach(id => {
+        const doc = state.sessions.get(id);
+        Object.keys(doc.ex || {}).forEach(exId => {
+          doc.ex[exId].forEach((s, i) => {
+            if (s.w == null && s.r == null && !s.d) return;
+            lines.push([doc.date, doc.day, doc.deload ? "si" : "no", q(NAMES[exId] || exId), i + 1, s.w == null ? "" : fmt(s.w), s.r == null ? "" : s.r, s.d ? "si" : "no", q(doc.note || "")].join(";"));
+          });
+        });
+      });
+      return offerFile("cuaderno-de-cargas-" + todayISO() + ".csv", "﻿" + lines.join("\n"), "text/csv").then(r => {
+        msg.textContent = r === "cancel" ? "Exportación cancelada." : "CSV listo para abrir en Excel o Numbers.";
+      });
+    }).catch(() => { msg.textContent = "No se pudo exportar. Inténtalo de nuevo."; });
+  });
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], cell = "", inQ = false;
+    text = text.replace(/^﻿/, "");
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQ) {
+        if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else inQ = false; }
+        else cell += ch;
+      } else if (ch === '"') inQ = true;
+      else if (ch === ";") { row.push(cell); cell = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(cell); cell = "";
+        if (row.some(c => c !== "")) rows.push(row);
+        row = [];
+      } else cell += ch;
+    }
+    row.push(cell);
+    if (row.some(c => c !== "")) rows.push(row);
+    return rows;
+  }
+  function sessionsFromCSV(text) {
+    const rows = parseCSV(text);
+    const head = rows.shift() || [];
+    const col = name => head.indexOf(name);
+    const iF = col("fecha"), iD = col("dia"), iL = col("descarga"), iE = col("ejercicio"), iS = col("serie"), iW = col("kg"), iR = col("reps"), iH = col("hecha"), iN = col("nota_sesion");
+    if (iF < 0 || iD < 0 || iE < 0 || iS < 0) throw new Error("formato");
+    const byName = {};
+    Object.keys(NAMES).forEach(id => { byName[NAMES[id].toLowerCase()] = id; });
+    const out = {};
+    rows.forEach(r => {
+      const date = r[iF], day = r[iD];
+      const exId = byName[(r[iE] || "").toLowerCase()] || r[iE];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !DAY_BY_KEY[day] || !exId) return;
+      const id = "s-" + date + "-" + day;
+      const doc = out[id] || (out[id] = { date, day, deload: r[iL] === "si", ex: {}, upd: Date.now() });
+      if (iN >= 0 && r[iN]) doc.note = r[iN];
+      const arr = doc.ex[exId] || (doc.ex[exId] = []);
+      const k = Math.max(0, (parseInt(r[iS], 10) || 1) - 1);
+      while (arr.length <= k) arr.push({ w: null, r: null, d: false });
+      arr[k] = { w: iW >= 0 ? num(r[iW]) : null, r: iR >= 0 ? num(r[iR]) : null, d: iH >= 0 && r[iH] === "si" };
+    });
+    return out;
+  }
+  $("#importFile").addEventListener("change", ev => {
+    const f = ev.target.files && ev.target.files[0];
+    const msg = $("#exportMsg");
+    ev.target.value = "";
+    if (!f) return;
+    f.text().then(text => {
+      let incoming;
+      if (/^\s*\{/.test(text)) {
+        const obj = JSON.parse(text);
+        if (!obj || obj.app !== "cuaderno-de-cargas" || typeof obj.sessions !== "object") throw new Error("formato");
+        incoming = obj.sessions;
+      } else incoming = sessionsFromCSV(text);
+      return flush().then(() => {
+        let added = 0, merged = 0;
+        Object.keys(incoming).forEach(id => {
+          const doc = incoming[id];
+          if (!doc || !doc.date || !doc.day || !doc.ex) return;
+          const cur = state.sessions.get(id);
+          if (!cur) { state.sessions.set(id, doc); added++; return; }
+          let changed = false;
+          Object.keys(doc.ex).forEach(exId => { if (!cur.ex || !cur.ex[exId]) { cur.ex = cur.ex || {}; cur.ex[exId] = doc.ex[exId]; changed = true; } });
+          if (!cur.note && doc.note) { cur.note = doc.note; changed = true; }
+          if (changed) merged++;
+        });
+        persistAll();
+        loadSession(); renderDays(); renderList();
+        renderBackupInfo();
+        msg.textContent = added || merged
+          ? "Restauradas " + added + (added === 1 ? " sesión nueva" : " sesiones nuevas") + (merged ? " y completadas " + merged : "") + "."
+          : "No había nada nuevo en esa copia.";
+      });
+    }).catch(() => { msg.textContent = "Ese archivo no es una copia válida del cuaderno."; });
+  });
+
+  /* Sonido */
+  let actx = null;
+  function primeAudio() {
+    try {
+      if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
+      if (actx && actx.state === "suspended") actx.resume();
+    } catch (e) {}
+  }
+  document.addEventListener("pointerdown", primeAudio);
+  function beep() {
+    if (!soundOn || !actx) return;
+    try {
+      [0, 0.22, 0.44].forEach((t, i) => {
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type = "sine"; o.frequency.value = i === 2 ? 1175 : 880;
+        o.connect(g); g.connect(actx.destination);
+        const st = actx.currentTime + t;
+        g.gain.setValueAtTime(0.0001, st);
+        g.gain.exponentialRampToValueAtTime(0.35, st + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, st + 0.18);
+        o.start(st); o.stop(st + 0.2);
+      });
+    } catch (e) {}
+  }
+  $("#sound").checked = soundOn;
+  $("#sound").addEventListener("change", ev => { soundOn = ev.target.checked; ls.set(LS_SOUND, soundOn ? "1" : "0"); if (soundOn) { primeAudio(); beep(); } });
+
+  /* Temporizador de descanso */
+  const rest = { end: 0, timer: null, total: 1, fired: false };
+  function renderRest() {
+    const ms = rest.end - Date.now();
+    const left = Math.max(0, Math.ceil(ms / 1000));
+    $("#restT").textContent = left > 0 ? mmss(left) : "+" + mmss(Math.floor(-ms / 1000));
+    $("#restBar").style.width = Math.min(100, 100 * (1 - left / rest.total)) + "%";
+    if (left === 0 && !rest.fired) {
+      /* El contador sigue sumando: el mínimo es orientativo, se sigue cuando uno está recuperado. */
+      rest.fired = true;
+      $("#rest").classList.add("end");
+      $("#restL").textContent = "Mínimo cumplido. Sigue cuando estés listo";
+      beep();
+      try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+    }
+  }
+  function startRest(sec, label) {
+    clearInterval(rest.timer);
+    rest.total = sec; rest.end = Date.now() + sec * 1000; rest.fired = false; rest.label = label;
+    $("#rest").hidden = false;
+    $("#rest").classList.remove("end");
+    $("#restL").textContent = label;
+    renderRest();
+    rest.timer = setInterval(renderRest, 250);
+  }
+  function stopRest() { clearInterval(rest.timer); rest.timer = null; $("#rest").hidden = true; }
+  function nudge(ms) {
+    const base = Math.max(rest.end, Date.now());
+    rest.end = Math.max(Date.now(), base + ms);
+    rest.total = Math.max(rest.total, Math.ceil((rest.end - Date.now()) / 1000));
+    if (rest.end > Date.now()) { rest.fired = false; $("#rest").classList.remove("end"); $("#restL").textContent = rest.label || "Descanso"; if (!rest.timer) rest.timer = setInterval(renderRest, 250); }
+    renderRest();
+  }
+  $("#restPlus").addEventListener("click", () => nudge(15000));
+  $("#restMinus").addEventListener("click", () => nudge(-15000));
+  $("#restStop").addEventListener("click", stopRest);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && rest.timer) renderRest(); });
+
+  /* Pantalla encendida mientras se entrena */
+  let wl = null;
+  function lock() {
+    try {
+      if ("wakeLock" in navigator && !wl) navigator.wakeLock.request("screen").then(l => { wl = l; l.addEventListener("release", () => { wl = null; }); }, () => {});
+    } catch (e) {}
+  }
+  document.addEventListener("pointerdown", lock, { once: true });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !wl) lock(); });
+
+  /* Altura de la barra para el desplazamiento */
+  try {
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty("--barH", $("#bar").offsetHeight + "px"));
+    ro.observe($("#bar"));
+  } catch (e) {}
+
+  /* Guardado en el dispositivo */
+  function persistAll() {
+    const obj = {};
+    state.sessions.forEach((v, k) => { obj[k] = v; });
+    ls.set(LS_KEY, JSON.stringify(obj));
+  }
+  function goLocal() {
+    useLocal = true;
+    try {
+      const raw = ls.get(LS_KEY);
+      const obj = raw ? JSON.parse(raw) : {};
+      state.sessions = new Map(Object.keys(obj).map(k => [k, obj[k]]));
+    } catch (e) {}
+    setStatus("local");
+    loadSession(); renderDays(); renderList();
+    renderBackupInfo();
+  }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+  }
+
+  /* Arranque */
+  $("#date").value = state.date;
+  goLocal();
+  showView(location.hash.slice(1) || "entreno");
+})();
+</script>
+</body>
+</html>
