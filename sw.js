@@ -1,5 +1,5 @@
 /* Cuaderno de Cargas: funciona sin conexión y se actualiza solo al abrir con conexión. */
-const VERSION = "v1";
+const VERSION = "v3";
 const SHELL = "cc-shell-" + VERSION;
 const FONTS = "cc-fonts";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
