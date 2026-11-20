@@ -142,6 +142,12 @@ h1 { margin: 0; font-family: var(--display); font-stretch: 72%; font-weight: 800
 .ex-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
 .goal { margin: 0; display: flex; flex-direction: column; gap: 3px; background: var(--accent-soft); color: var(--ink); border-radius: 12px; padding: 10px 12px; font-size: 0.88rem; }
 .goal b { color: var(--accent); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.goal .gl { display: flex; align-items: center; gap: 8px; }
+.goal .gl .chip { font-style: normal; }
+.trend { margin: 2px 0 0; font-size: 0.8rem; color: var(--muted); }
+.trend.up { color: var(--good); }
+.trend.down { color: var(--fail); }
+.goal .gnote { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 .goal.first { background: var(--field); }
 .goal.first b { color: var(--muted); }
 .last { margin: 0; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -315,7 +321,7 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
           <li><span class="chip hard">RIR 1</span><span>Paras con 1 en recámara.</span></li>
           <li><span class="chip fail">Fallo</span><span>Hasta que no sale otra con buena técnica.</span></li>
         </ul>
-        <p class="small" style="margin-top:12px">Todas entre 8 y 12 reps. Cuando llegas a 12 en la última serie, la app te dice que subas la carga.</p>
+        <p class="small" style="margin-top:12px">Todas entre 8 y 12 reps. Doble progresión: con el mismo peso intentas sumar una rep en cada serie; cuando llegas a 12 en todas las series, subes al siguiente peso y vuelves a 8-9. El progreso se mira en la tendencia de 4 semanas, no sesión a sesión.</p>
         <p class="small" style="margin-top:8px">El descanso marcado es un mínimo: al cumplirse suena el aviso y el contador sigue sumando. En los ejercicios unilaterales el check se pulsa dos veces (L1 y L2), con un descanso corto entre lados.</p>
       </div>
       <div class="card">
@@ -392,11 +398,11 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
     ] },
     { k: "thu", ab: "Jue", short: "Pierna", name: "Pierna", ex: [
       { id: "belt-squat", n: "Belt squat", c: "B", rest: 180 },
-      { id: "prensa-unilateral", n: "Prensa unilateral hammer", c: "B", rest: 180, uni: true },
-      { id: "extension-cuadriceps", n: "Extensión de cuádriceps", c: "C", rest: 105 },
+      { id: "prensa-unilateral", n: "Prensa unilateral hammer", c: "A", rest: 180, uni: true },
+      { id: "extension-cuadriceps", n: "Extensión de cuádriceps hammer", c: "C", rest: 105 },
       { id: "aductor", n: "Aductor", c: "C", rest: 90 },
-      { id: "femoral-tumbado", n: "Femoral tumbado", c: "C", rest: 105 },
-      { id: "gemelo-pie", n: "Gemelo de pie", c: "A", rest: 105, note: "Recorrido completo y pausa de 1 a 2 s abajo." }
+      { id: "femoral-sentado", n: "Femoral sentado", c: "C", rest: 105 },
+      { id: "gemelo-pie", n: "Gemelo de pie", c: "C", rest: 105, note: "Recorrido completo y pausa de 1 a 2 s abajo." }
     ] },
     { k: "fri", ab: "Vie", short: "Espalda", name: "Espalda + brazo", ex: [
       { id: "pullover-polea", n: "Pullover en polea", c: "A", rest: 105, note: "Antes, 1 serie ligera de aproximación. No la anotes." },
@@ -413,7 +419,8 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       { id: "deltoide-posterior", n: "Deltoide posterior", c: "A", rest: 105 },
       { id: "laterales-maquina", n: "Laterales en máquina", c: "A", rest: 90 },
       { id: "abductor", n: "Abductor", c: "C", rest: 90 },
-      { id: "femoral-sentado", n: "Femoral sentado", c: "C", rest: 105 },
+      { id: "femoral-sentado", n: "Femoral sentado", c: "A", rest: 105 },
+      { id: "femoral-tumbado", n: "Femoral tumbado", c: "A", rest: 105 },
       { id: "gemelo-pie", n: "Gemelo de pie", c: "A", rest: 105, note: "Recorrido completo y pausa de 1 a 2 s abajo." }
     ] }
   ];
@@ -571,16 +578,47 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
     return best;
   }
   const setText = s => (s.w != null ? fmt(s.w) : "?") + "×" + (s.r != null ? s.r : "?");
-  function suggestion(last) {
-    let top = null;
-    for (let i = last.sets.length - 1; i >= 0; i--) { if (last.sets[i].r != null) { top = last.sets[i]; break; } }
-    if (!top) return "";
-    if (state.deload) return "Descarga: usa una carga que te deje 2-3 reps en recámara.";
-    if (last.doc.deload) return "Vienes de descarga. Parte de esa carga y busca el fallo entre 8 y 12.";
-    const w = top.w != null ? fmt(top.w) + " kg" : "el mismo peso";
-    if (top.r >= 12) return "Hiciste " + top.r + " reps con " + w + ". Sube la carga y vuelve a 8-9.";
-    if (top.r < 8) return "Mantén " + w + " y busca llegar a 8 reps.";
-    return "Mantén " + w + " y busca " + (top.r + 1) + " reps en la última serie.";
+  /* Serie de la última sesión que corresponde a la fila i, contando desde la última serie
+     (así la serie al fallo se compara siempre con la serie al fallo, aunque cambie el número de series). */
+  function refFor(last, i, n) {
+    if (!last || !last.sets.length) return null;
+    const k = last.sets.length - (n - i);
+    return last.sets[k] || null;
+  }
+  /* Doble progresión: mismo peso hasta llegar a 12 reps en TODAS las series; entonces se sube el peso
+     y se vuelve a 8-9. Cada serie se compara con la misma serie de la última vez. */
+  const TOP = 12, BOTTOM = 8;
+  function setGoal(ref) {
+    if (!ref || ref.r == null) return "";
+    const w = ref.w != null ? fmt(ref.w) + " kg" : "mismo peso";
+    if (ref.r >= TOP) return w + " × " + TOP + " · ya en el tope, mantenlo";
+    if (ref.r < BOTTOM) return w + " · llega a " + BOTTOM;
+    return w + " × " + (ref.r + 1);
+  }
+  function suggestion(last, labels) {
+    if (state.deload) return { text: "Descarga: usa una carga que te deje 2-3 reps en recámara." };
+    if (last.doc.deload) return { text: "Vienes de descarga. Parte de esa carga y busca el fallo entre 8 y 12." };
+    const refs = labels.map((lab, i) => refFor(last, i, labels.length));
+    if (refs.every(r => r && r.r != null && r.r >= TOP))
+      return { text: "Llegaste a " + TOP + " en todas las series: sube al siguiente peso disponible y busca 8-9 reps.", up: true };
+    const lines = labels.map((lab, i) => ({ lab, txt: setGoal(refs[i]) })).filter(x => x.txt);
+    return lines.length ? { lines } : null;
+  }
+  /* Tendencia: mejor 1RM estimado de las últimas 4 semanas frente a las 4 anteriores (sin descargas). */
+  function trendFor(exId) {
+    const curId = sessionId();
+    const now = parseISO(state.date).getTime(), DAY = 86400000;
+    let a = 0, b = 0;
+    state.sessions.forEach((doc, id) => {
+      if (id === curId || !doc || doc.deload || !doc.ex || !doc.ex[exId] || doc.date > state.date) return;
+      const age = (now - parseISO(doc.date).getTime()) / DAY;
+      let best = 0;
+      doc.ex[exId].forEach(s => { const v = e1rm(s.w, s.r); if (v && v > best) best = v; });
+      if (age < 28) a = Math.max(a, best); else if (age < 56) b = Math.max(b, best);
+    });
+    if (!a || !b) return null;
+    const pct = (a / b - 1) * 100;
+    return { pct, dir: pct > 1.5 ? "up" : pct < -1.5 ? "down" : "flat" };
   }
 
   function exStats(e) {
@@ -609,14 +647,17 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
     const state_ = st.complete ? CHECK : st.done + "/" + st.total;
     let body = "";
     if (open) {
-      const sugg = last ? suggestion(last) : "";
+      const sugg = last ? suggestion(last, labels) : null;
       const goal = sugg
-        ? '<p class="goal"><b>Objetivo</b><span>' + esc(sugg) + "</span></p>"
+        ? '<div class="goal"><b>Objetivo</b>' + (sugg.text ? "<span>" + esc(sugg.text) + "</span>"
+            : sugg.lines.map(x => '<span class="gl"><i class="chip ' + chipClass(x.lab) + '">' + esc(x.lab) + "</i>" + esc(x.txt) + "</span>").join("") + '<span class="gnote">Mismo peso hasta llegar a 12 en todas las series. Si hoy no sale la rep extra, repite el peso.</span>') + "</div>"
         : (last ? "" : '<p class="goal first"><b>Primera vez</b><span>Anota el peso con el que empiezas.</span></p>');
+      const tr = trendFor(e.id);
+      const trendTxt = tr ? '<p class="trend ' + tr.dir + '">Últimas 4 semanas: ' + (tr.dir === "up" ? "↑ sube " : tr.dir === "down" ? "↓ baja " : "→ estable ") + (tr.pct > 0 ? "+" : "") + tr.pct.toFixed(1).replace(".", ",") + " % (1RM estimado)</p>" : "";
       const lastTxt = last ? '<p class="last">Última vez (' + dmy(last.doc.date) + (last.doc.deload ? ", descarga" : "") + "): " + last.sets.map(setText).join(" · ") + "</p>" : "";
       const rows = labels.map((lab, i) => {
         const s = state.cur[e.id][i];
-        const ref = last && (last.sets[i] || last.sets[last.sets.length - 1]);
+        const ref = refFor(last, i, labels.length);
         const v = e1rm(num(s.w), num(s.r));
         const pr = best > 0 && v && v > best + 0.01;
         const half = !s.d && !!state.half[sessionId() + "-" + e.id + "-" + i];
@@ -628,7 +669,7 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
           '<input type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off" id="r-' + e.id + "-" + i + '" data-ex="' + e.id + '" data-i="' + i + '" data-k="r" placeholder="' + (ref && ref.r != null ? ref.r : "–") + '" value="' + esc(s.r) + '" aria-label="Repeticiones, serie ' + (i + 1) + '">' +
           '<button type="button" class="done' + (half ? " half" : "") + '" data-done data-ex="' + e.id + '" data-i="' + i + '" aria-pressed="' + s.d + '" aria-label="' + doneLabel + '">' + doneIcon + "</button></div>";
       }).join("");
-      body = '<div class="ex-body" id="body-' + e.id + '">' + goal + lastTxt +
+      body = '<div class="ex-body" id="body-' + e.id + '">' + goal + lastTxt + trendTxt +
         '<div class="sets"><div class="set head" aria-hidden="true"><span></span><span>kg</span><span>reps</span><span></span></div>' + rows + "</div>" +
         (e.note ? '<p class="note">' + esc(e.note) + "</p>" : "") + "</div>";
     }
@@ -1171,6 +1212,16 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       const raw = ls.get(LS_KEY);
       const obj = raw ? JSON.parse(raw) : {};
       state.sessions = new Map(Object.keys(obj).map(k => [k, obj[k]]));
+    } catch (e) {}
+    /* Migración única: el 19/11/2026 el femoral sentado se anotó en el tumbado. Se pasa al sentado. */
+    try {
+      const m = state.sessions.get("s-2026-11-19-thu");
+      if (m && m.ex && m.ex["femoral-tumbado"] && !m.ex["femoral-sentado"]) {
+        m.ex["femoral-sentado"] = m.ex["femoral-tumbado"];
+        delete m.ex["femoral-tumbado"];
+        m.upd = Date.now();
+        persistAll();
+      }
     } catch (e) {}
     setStatus("local");
     loadSession(); renderDays(); renderList();
