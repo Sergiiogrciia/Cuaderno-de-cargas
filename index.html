@@ -381,7 +381,7 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       { id: "jalon-neutro", n: "Jalón al pecho, agarre neutro", c: "A", rest: 150 },
       { id: "remo-unilateral", n: "Remo unilateral", c: "A", rest: 150, uni: true },
       { id: "remo-alto-polea", n: "Remo alto en polea, agarre prono", c: "A", rest: 150 },
-      { id: "remo-t", n: "Remo en T / alto en máquina", c: "A", rest: 150 },
+      { id: "remo-t", n: "Remo alto en máquina", c: "A", rest: 150 },
       { id: "deltoide-posterior", n: "Deltoide posterior", c: "A", rest: 105 },
       { id: "curl-alterno-pie", n: "Curl alterno de pie con mancuernas", c: "A", rest: 105 },
       { id: "martillo-banco", n: "Curl martillo en banco", c: "A", rest: 105 }
@@ -404,18 +404,17 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       { id: "femoral-sentado", n: "Femoral sentado", c: "C", rest: 105 },
       { id: "gemelo-pie", n: "Gemelo de pie", c: "C", rest: 105, note: "Recorrido completo y pausa de 1 a 2 s abajo." }
     ] },
-    { k: "fri", ab: "Vie", short: "Espalda", name: "Espalda + brazo", ex: [
-      { id: "pullover-polea", n: "Pullover en polea", c: "A", rest: 105, note: "Antes, 1 serie ligera de aproximación. No la anotes." },
-      { id: "remo-bajo", n: "Remo bajo en polea", c: "A", rest: 150 },
-      { id: "curl-polea", n: "Curl de bíceps en polea", c: "A", rest: 105 },
+    { k: "fri", ab: "Vie", short: "Espalda", name: "Espalda + brazo + abs", ex: [
+      { id: "crunch-polea", n: "Crunch abdominal en polea", c: "A", rest: 90 },
+      { id: "pullover-polea", n: "Pullover en polea Eleiko", c: "A", rest: 105, note: "Antes, 1 serie ligera de aproximación. No la anotes." },
+      { id: "remo-en-t", n: "Remo en T", c: "A", rest: 150 },
+      { id: "curl-predicador", n: "Curl predicador en máquina", c: "A", rest: 105 },
       { id: "bayesian", n: "Curl bayesian", c: "A", rest: 105, uni: true },
-      { id: "martillo-pared", n: "Curl martillo apoyado en pared", c: "A", rest: 105 },
       { id: "triceps-unilateral", n: "Tríceps en polea unilateral", c: "A", rest: 105, uni: true },
       { id: "triceps-tras-nuca", n: "Tríceps tras nuca unilateral en polea", c: "A", rest: 105, uni: true }
     ] },
     { k: "sat", ab: "Sáb", short: "Hombro", name: "Hombro + varios", ex: [
-      { id: "crunch-polea", n: "Crunch abdominal en polea", c: "A", rest: 90 },
-      { id: "militar-maquina", n: "Militar en máquina", c: "B", rest: 180, note: "Primer ejercicio de hombro, con el tríceps descansado." },
+      { id: "militar-maquina", n: "Militar en multipower", c: "B", rest: 180, note: "Primer ejercicio de hombro, con el tríceps descansado." },
       { id: "deltoide-posterior", n: "Deltoide posterior", c: "A", rest: 105 },
       { id: "laterales-maquina", n: "Laterales en máquina", c: "A", rest: 90 },
       { id: "abductor", n: "Abductor", c: "C", rest: 90 },
@@ -512,6 +511,12 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       const arr = (state.cur[e.id] || []).map(s => ({ w: num(s.w), r: num(s.r), d: !!s.d }));
       if (arr.some(s => s.w !== null || s.r !== null || s.d)) { ex[e.id] = arr; any = true; }
     });
+    /* Conserva las marcas de ejercicios que ya no están en la rutina de este día, para no borrar historial. */
+    const prev = state.sessions.get(sessionId());
+    if (prev && prev.ex) {
+      const ids = new Set(dayData().ex.map(e => e.id));
+      Object.keys(prev.ex).forEach(k => { if (!ids.has(k) && !ex[k]) { ex[k] = prev.ex[k]; any = true; } });
+    }
     const note = state.note.trim();
     if (!any && !note) return null;
     const d = { date: state.date, day: state.day, deload: state.deload, ex: ex, upd: Date.now() };
@@ -1213,15 +1218,24 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       const obj = raw ? JSON.parse(raw) : {};
       state.sessions = new Map(Object.keys(obj).map(k => [k, obj[k]]));
     } catch (e) {}
-    /* Migración única: el 19/11/2026 el femoral sentado se anotó en el tumbado. Se pasa al sentado. */
+    /* Migraciones únicas: marcas anotadas en un ejercicio que en realidad era otro. Solo tocan la sesión indicada. */
     try {
-      const m = state.sessions.get("s-2026-11-19-thu");
-      if (m && m.ex && m.ex["femoral-tumbado"] && !m.ex["femoral-sentado"]) {
-        m.ex["femoral-sentado"] = m.ex["femoral-tumbado"];
-        delete m.ex["femoral-tumbado"];
-        m.upd = Date.now();
-        persistAll();
-      }
+      const MIG = [
+        ["s-2026-11-19-thu", "femoral-tumbado", "femoral-sentado"],
+        ["s-2026-11-20-fri", "remo-bajo", "remo-en-t"],
+        ["s-2026-11-20-fri", "curl-polea", "curl-predicador"]
+      ];
+      let changed = false;
+      MIG.forEach(([sid, from, to]) => {
+        const m = state.sessions.get(sid);
+        if (m && m.ex && m.ex[from] && !m.ex[to]) {
+          m.ex[to] = m.ex[from];
+          delete m.ex[from];
+          m.upd = Date.now();
+          changed = true;
+        }
+      });
+      if (changed) persistAll();
     } catch (e) {}
     setStatus("local");
     loadSession(); renderDays(); renderList();
