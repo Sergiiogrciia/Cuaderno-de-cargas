@@ -152,6 +152,21 @@ h1 { margin: 0; font-family: var(--display); font-stretch: 72%; font-weight: 800
 .goal.first b { color: var(--muted); }
 .last { margin: 0; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .note { margin: 0; font-size: 0.78rem; color: var(--muted); }
+.setup { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 0.8rem; color: var(--muted); text-align: left; cursor: pointer; }
+.setup svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.setup span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.setup.has { color: var(--ink); }
+.setup.has b { color: var(--muted); font-weight: 600; flex: none; }
+.setup-ed { display: flex; flex-direction: column; gap: 8px; background: var(--field); border-radius: 12px; padding: 10px; }
+.setup-ed label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.setup-ed textarea { width: 100%; margin: 0; min-height: 64px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 16px; background: var(--surface); color: var(--ink); box-sizing: border-box; }
+.setup-ed .row { display: flex; gap: 8px; justify-content: flex-end; }
+.setup-ed .row button { border: 0; border-radius: 10px; padding: 8px 14px; font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; background: var(--surface); color: var(--ink); }
+.setup-ed .row button.pri { background: var(--accent); color: var(--accent-ink); }
+.setup-ed .old { display: flex; flex-direction: column; gap: 6px; }
+.setup-ed .old p { margin: 0; font-size: 0.72rem; color: var(--muted); }
+.setup-ed .old button { display: block; width: 100%; text-align: left; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 0.8rem; cursor: pointer; }
+.setup-ed .old button i { display: block; font-style: normal; font-size: 0.68rem; color: var(--muted); margin-bottom: 2px; }
 .sets { display: flex; flex-direction: column; gap: 6px; }
 .set { display: grid; grid-template-columns: 4.4rem minmax(0, 1fr) minmax(0, 1fr) 50px; gap: 6px; align-items: center; border-radius: 12px; }
 .set.head { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-align: center; }
@@ -282,7 +297,7 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       <div id="list"></div>
       <details class="session-note" id="noteBox">
         <summary><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg>Nota de la sesión</summary>
-        <textarea id="note" aria-label="Nota de la sesión" placeholder="Sensaciones, sueño, molestias, cambios de máquina…"></textarea>
+        <textarea id="note" aria-label="Nota de la sesión" placeholder="Sensaciones, sueño, molestias…"></textarea>
       </details>
       <p class="finish" id="finish" hidden></p>
     </section>
@@ -414,12 +429,12 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       { id: "triceps-tras-nuca", n: "Tríceps tras nuca unilateral en polea", c: "A", rest: 105, uni: true }
     ] },
     { k: "sat", ab: "Sáb", short: "Hombro", name: "Hombro + varios", ex: [
-      { id: "militar-maquina", n: "Militar en multipower", c: "B", rest: 180, note: "Primer ejercicio de hombro, con el tríceps descansado." },
+      { id: "militar-maquina", n: "Militar en multipower", c: "A", rest: 180, note: "Primer ejercicio de hombro, con el tríceps descansado." },
       { id: "deltoide-posterior", n: "Deltoide posterior", c: "A", rest: 105 },
       { id: "laterales-maquina", n: "Laterales en máquina", c: "A", rest: 90 },
-      { id: "abductor", n: "Abductor", c: "C", rest: 90 },
       { id: "femoral-sentado", n: "Femoral sentado", c: "A", rest: 105 },
       { id: "femoral-tumbado", n: "Femoral tumbado", c: "A", rest: 105 },
+      { id: "abductor", n: "Abductor", c: "C", rest: 90 },
       { id: "gemelo-pie", n: "Gemelo de pie", c: "A", rest: 105, note: "Recorrido completo y pausa de 1 a 2 s abajo." }
     ] }
   ];
@@ -449,17 +464,19 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
   const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* Estado */
-  const LS_KEY = "cc-sessions-v1", LS_DELOAD = "cc-deload", LS_SOUND = "cc-sound", LS_EX = "cc-ex";
+  const LS_KEY = "cc-sessions-v1", LS_DELOAD = "cc-deload", LS_SOUND = "cc-sound", LS_EX = "cc-ex", LS_SETUP = "cc-setup";
   const state = {
     day: ({ 1: "mon", 2: "tue", 3: "thu", 4: "thu", 5: "fri", 6: "sat", 0: "mon" })[new Date().getDay()],
     date: todayISO(),
     deload: false,
     view: "entreno",
     metric: "w",
+    progDay: "all",
     sessions: new Map(),
     cur: {},
     note: "",
     open: {},
+    setupEdit: null,
     half: {},
     rev: 0,
     savedRev: 0
@@ -562,16 +579,24 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
   }
 
   /* Referencias del historial */
-  function lastFor(exId) {
+  /* Última vez que se hizo el ejercicio en este mismo día de la rutina (el femoral del sábado se compara
+     con el del sábado anterior, no con el del jueves). Si nunca se hizo este día, devuelve la última de
+     otro día marcada como "other", solo como orientación. Con real = true salta las sesiones de descarga,
+     que no sirven de referencia para el objetivo (eran 1 serie a RIR 2-3). */
+  function lastFor(exId, real) {
     const curId = sessionId();
-    let best = null;
+    let same = null, any = null;
+    const newer = (a, doc) => !a || doc.date > a.doc.date || (doc.date === a.doc.date && (doc.upd || 0) > (a.doc.upd || 0));
     state.sessions.forEach((doc, id) => {
-      if (id === curId || !doc || !doc.ex || !doc.ex[exId] || doc.date > state.date) return;
-      const sets = doc.ex[exId].filter(s => s.w != null || s.r != null);
+      if (id === curId || !doc || !doc.ex || !doc.ex[exId] || doc.date > state.date || (real && doc.deload)) return;
+      const raw = doc.ex[exId];
+      const sets = raw.filter(s => s.w != null || s.r != null);
       if (!sets.length) return;
-      if (!best || doc.date > best.doc.date || (doc.date === best.doc.date && (doc.upd || 0) > (best.doc.upd || 0))) best = { doc, sets };
+      if (newer(any, doc)) any = { doc, sets, raw };
+      if (doc.day === state.day && newer(same, doc)) same = { doc, sets, raw };
     });
-    return best;
+    if (same) return same;
+    return any ? Object.assign({ other: true }, any) : null;
   }
   function bestBefore(exId) {
     const curId = sessionId();
@@ -584,11 +609,14 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
   }
   const setText = s => (s.w != null ? fmt(s.w) : "?") + "×" + (s.r != null ? s.r : "?");
   /* Serie de la última sesión que corresponde a la fila i, contando desde la última serie
-     (así la serie al fallo se compara siempre con la serie al fallo, aunque cambie el número de series). */
+     (así la serie al fallo se compara siempre con la serie al fallo, aunque cambie el número de series).
+     Se usa la posición real que tenía la serie en esa sesión: si aquel día solo hiciste la primera serie,
+     no se toma como si fuera la de fallo. */
   function refFor(last, i, n) {
-    if (!last || !last.sets.length) return null;
-    const k = last.sets.length - (n - i);
-    return last.sets[k] || null;
+    if (!last || !last.raw || !last.raw.length) return null;
+    const k = last.raw.length - (n - i);
+    const s = last.raw[k];
+    return s && (s.w != null || s.r != null) ? s : null;
   }
   /* Doble progresión: mismo peso hasta llegar a 12 reps en TODAS las series; entonces se sube el peso
      y se vuelve a 8-9. Cada serie se compara con la misma serie de la última vez. */
@@ -602,7 +630,6 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
   }
   function suggestion(last, labels) {
     if (state.deload) return { text: "Descarga: usa una carga que te deje 2-3 reps en recámara." };
-    if (last.doc.deload) return { text: "Vienes de descarga. Parte de esa carga y busca el fallo entre 8 y 12." };
     const refs = labels.map((lab, i) => refFor(last, i, labels.length));
     if (refs.every(r => r && r.r != null && r.r >= TOP))
       return { text: "Llegaste a " + TOP + " en todas las series: sube al siguiente peso disponible y busca 8-9 reps.", up: true };
@@ -641,28 +668,61 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
   const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const CHEV = '<svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
   const chipClass = lab => lab === "Fallo" ? "fail" : lab === "RIR 1" ? "hard" : lab === "RIR 2-3" ? "easy" : "";
+  /* Ajuste de máquina por ejercicio: se guarda una vez y sale en todas las sesiones. */
+  function getSetup() { try { const o = JSON.parse(ls.get(LS_SETUP) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } }
+  function setSetup(id, txt) { const o = getSetup(); if (txt) o[id] = txt; else delete o[id]; ls.set(LS_SETUP, JSON.stringify(o)); }
+  /* Notas de sesión antiguas de días en los que se anotó este ejercicio, para poder reutilizarlas. */
+  function oldNotes(exId) {
+    const seen = new Set(), out = [];
+    Array.from(state.sessions.values())
+      .filter(d => d && d.note && d.note.trim() && d.ex && d.ex[exId])
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      .forEach(d => { const t = d.note.trim(); if (!seen.has(t) && out.length < 6) { seen.add(t); out.push({ date: d.date, text: t }); } });
+    return out;
+  }
+  const GEAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>';
+  function setupHTML(e) {
+    const txt = getSetup()[e.id] || "";
+    if (state.setupEdit !== e.id) {
+      return txt
+        ? '<button type="button" class="setup has" data-setup aria-label="Editar ajuste de máquina">' + GEAR + "<b>Ajuste:</b><span>" + esc(txt) + "</span></button>"
+        : '<button type="button" class="setup" data-setup>' + GEAR + "<span>Añadir ajuste de máquina</span></button>";
+    }
+    const old = oldNotes(e.id);
+    return '<div class="setup-ed"><label for="setup-' + e.id + '">Ajuste de máquina</label>' +
+      '<textarea id="setup-' + e.id + '" placeholder="Ej.: asiento 4, respaldo 2, agarre neutro">' + esc(txt) + "</textarea>" +
+      '<div class="row"><button type="button" data-setup-cancel>Cancelar</button><button type="button" class="pri" data-setup-save>Guardar</button></div>' +
+      (old.length ? '<div class="old"><p>Tus notas de sesión de días con este ejercicio. Toca una para añadirla y deja solo lo que sea de este ejercicio.</p>' +
+        old.map((n, i) => '<button type="button" data-setup-use="' + i + '"><i>' + dmy(n.date) + "</i>" + esc(n.text) + "</button>").join("") + "</div>" : "") +
+      "</div>";
+  }
   function cardHTML(e) {
     const labels = setsFor(e);
     const st = exStats(e);
     const open = state.open[e.id] !== undefined ? state.open[e.id] : !st.complete;
     const last = lastFor(e.id);
+    /* El objetivo sale de la última sesión normal de este día: tras una descarga se vuelve a las cargas de antes. */
+    const goalRef = state.deload ? last : lastFor(e.id, true);
     const best = bestBefore(e.id);
     const isNext = e.id === nextId();
     const sub = labels.length + (labels.length === 1 ? " serie" : " series") + (e.uni ? " por lado" : "") + " · descanso " + mmss(e.rest);
     const state_ = st.complete ? CHECK : st.done + "/" + st.total;
     let body = "";
     if (open) {
-      const sugg = last ? suggestion(last, labels) : null;
+      const sugg = goalRef && !goalRef.other ? suggestion(goalRef, labels) : null;
+      const afterDeload = !state.deload && sugg && last && last.doc.deload && !last.other;
       const goal = sugg
-        ? '<div class="goal"><b>Objetivo</b>' + (sugg.text ? "<span>" + esc(sugg.text) + "</span>"
+        ? '<div class="goal"><b>Objetivo' + (afterDeload ? " (vs. " + dmy(goalRef.doc.date) + ", antes de la descarga)" : "") + "</b>" + (sugg.text ? "<span>" + esc(sugg.text) + "</span>"
             : sugg.lines.map(x => '<span class="gl"><i class="chip ' + chipClass(x.lab) + '">' + esc(x.lab) + "</i>" + esc(x.txt) + "</span>").join("") + '<span class="gnote">Mismo peso hasta llegar a 12 en todas las series. Si hoy no sale la rep extra, repite el peso.</span>') + "</div>"
-        : (last ? "" : '<p class="goal first"><b>Primera vez</b><span>Anota el peso con el que empiezas.</span></p>');
+        : last && last.other
+          ? '<p class="goal first"><b>Primera vez este día</b><span>El ' + DOW[parseISO(last.doc.date).getDay()] + " hiciste " + esc(last.sets.map(setText).join(" · ")) + ". Úsalo solo como orientación: hoy llegas con otra fatiga.</span></p>"
+          : (last ? "" : '<p class="goal first"><b>Primera vez</b><span>Anota el peso con el que empiezas.</span></p>');
       const tr = trendFor(e.id);
       const trendTxt = tr ? '<p class="trend ' + tr.dir + '">Últimas 4 semanas: ' + (tr.dir === "up" ? "↑ sube " : tr.dir === "down" ? "↓ baja " : "→ estable ") + (tr.pct > 0 ? "+" : "") + tr.pct.toFixed(1).replace(".", ",") + " % (1RM estimado)</p>" : "";
       const lastTxt = last ? '<p class="last">Última vez (' + dmy(last.doc.date) + (last.doc.deload ? ", descarga" : "") + "): " + last.sets.map(setText).join(" · ") + "</p>" : "";
       const rows = labels.map((lab, i) => {
         const s = state.cur[e.id][i];
-        const ref = refFor(last, i, labels.length);
+        const ref = refFor(goalRef && !goalRef.other ? goalRef : last, i, labels.length);
         const v = e1rm(num(s.w), num(s.r));
         const pr = best > 0 && v && v > best + 0.01;
         const half = !s.d && !!state.half[sessionId() + "-" + e.id + "-" + i];
@@ -676,7 +736,7 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       }).join("");
       body = '<div class="ex-body" id="body-' + e.id + '">' + goal + lastTxt + trendTxt +
         '<div class="sets"><div class="set head" aria-hidden="true"><span></span><span>kg</span><span>reps</span><span></span></div>' + rows + "</div>" +
-        (e.note ? '<p class="note">' + esc(e.note) + "</p>" : "") + "</div>";
+        (e.note ? '<p class="note">' + esc(e.note) + "</p>" : "") + setupHTML(e) + "</div>";
     }
     return '<article class="ex' + (isNext ? " next" : "") + (st.complete ? " complete" : "") + '" data-card="' + e.id + '">' +
       '<button type="button" class="ex-head" data-toggle aria-expanded="' + open + '"' + (open ? ' aria-controls="body-' + e.id + '"' : "") + ">" +
@@ -818,14 +878,27 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       renderCard(id);
       return;
     }
-    if (ev.target.closest("[data-copy]")) {
-      const last = lastFor(id);
-      if (!last) return;
-      state.cur[id].forEach((s, i) => {
-        const src = last.sets[i] || last.sets[last.sets.length - 1];
-        if (!s.w && src && src.w != null) { s.w = fmt(src.w); const inp = $("#w-" + id + "-" + i); if (inp) inp.value = s.w; }
-      });
-      touch();
+    if (ev.target.closest("[data-setup]")) {
+      const prevId = state.setupEdit;
+      state.setupEdit = id;
+      if (prevId && prevId !== id) renderCard(prevId);
+      renderCard(id);
+      const ta = $("#setup-" + id); if (ta) ta.focus();
+      return;
+    }
+    if (ev.target.closest("[data-setup-cancel]")) { state.setupEdit = null; renderCard(id); return; }
+    if (ev.target.closest("[data-setup-save]")) {
+      const ta = $("#setup-" + id);
+      setSetup(id, ta ? ta.value.trim() : "");
+      state.setupEdit = null;
+      renderCard(id);
+      return;
+    }
+    const use = ev.target.closest("[data-setup-use]");
+    if (use) {
+      const n = oldNotes(id)[+use.dataset.setupUse];
+      const ta = $("#setup-" + id);
+      if (n && ta) { ta.value = ta.value.trim() ? ta.value.trim() + "\n" + n.text : n.text; ta.focus(); }
       return;
     }
     const b = ev.target.closest("[data-done]");
@@ -834,11 +907,12 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
     const s = state.cur[id][i];
     if (!s.d) {
       /* Al marcar una serie vacía se rellena con lo de la serie anterior o con lo de la última vez. */
-      const last = lastFor(id);
-      const ref = last && (last.sets[i] || last.sets[last.sets.length - 1]);
+      const last = state.deload ? lastFor(id) : (lastFor(id, true) || lastFor(id));
+      const ref = refFor(last, i, setsFor(e).length);
       const prev = i > 0 ? state.cur[id][i - 1] : null;
       if (s.w === "") { if (prev && prev.w !== "") s.w = prev.w; else if (ref && ref.w != null) s.w = fmt(ref.w); }
-      if (s.r === "" && ref && ref.r != null) s.r = String(ref.r);
+      /* Las reps de otro día no se copian: allí la fatiga era otra. */
+      if (s.r === "" && ref && ref.r != null && !last.other) s.r = String(ref.r);
     }
     const hk = sessionId() + "-" + id + "-" + i;
     if (!s.d && e.uni && !state.half[hk]) {
@@ -896,8 +970,10 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
     const saved = ls.get(LS_EX);
     if (saved && NAMES[saved]) $("#exSel").value = saved;
   })();
-  $("#exSel").addEventListener("change", ev => { ls.set(LS_EX, ev.target.value); renderProgress(); });
+  $("#exSel").addEventListener("change", ev => { ls.set(LS_EX, ev.target.value); state.progDay = "all"; renderProgress(); });
   $("#exOut").addEventListener("click", ev => {
+    const pd = ev.target.closest("[data-pday]");
+    if (pd) { state.progDay = pd.dataset.pday; renderProgress(); return; }
     const b = ev.target.closest("[data-metric]");
     if (!b) return;
     state.metric = b.dataset.metric;
@@ -937,16 +1013,23 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
 
     /* Ejercicio */
     const id = $("#exSel").value;
+    /* Ejercicios que se hacen dos días: se puede ver cada día por separado, porque la fatiga y las series cambian. */
+    const exDays = DAYS.filter(d => d.ex.some(e => e.id === id));
+    if (state.progDay !== "all" && !exDays.some(d => d.k === state.progDay)) state.progDay = "all";
+    const dayFilter = exDays.length > 1
+      ? '<div class="seg" role="group" aria-label="Día" style="margin-bottom:12px"><button type="button" data-pday="all" aria-pressed="' + (state.progDay === "all") + '">Todos</button>' +
+        exDays.map(d => '<button type="button" data-pday="' + d.k + '" aria-pressed="' + (state.progDay === d.k) + '">' + d.ab + "</button>").join("") + "</div>"
+      : "";
     const rows = [];
     state.sessions.forEach(doc => {
-      if (doc && doc.ex && doc.ex[id]) {
+      if (doc && doc.ex && doc.ex[id] && (state.progDay === "all" || doc.day === state.progDay)) {
         const s = doc.ex[id].filter(x => x.w != null || x.r != null);
         if (s.length) rows.push({ doc, sets: s });
       }
     });
     rows.sort((x, y) => x.doc.date < y.doc.date ? -1 : x.doc.date > y.doc.date ? 1 : (x.doc.upd || 0) - (y.doc.upd || 0));
     if (!rows.length) {
-      $("#exOut").innerHTML = '<p class="empty">Aún no hay series de este ejercicio. Anótalas en Entreno y aparecerán aquí con su gráfica.</p>';
+      $("#exOut").innerHTML = dayFilter + '<p class="empty">Aún no hay series de este ejercicio. Anótalas en Entreno y aparecerán aquí con su gráfica.</p>';
       $("#tableOut").innerHTML = "";
       return;
     }
@@ -964,7 +1047,7 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       const y = state.metric === "e" ? me : mw;
       if (y != null) pts.push({ y: Math.round(y * 10) / 10, date: r.doc.date });
     });
-    let html = '<dl class="stats">' +
+    let html = dayFilter + '<dl class="stats">' +
       '<div class="stat"><dt>Mejor serie</dt><dd class="num">' + (bestSet ? fmt(bestSet.w) + "<small> kg × " + bestSet.r + "</small>" : "–") + "</dd></div>" +
       '<div class="stat"><dt>1RM estimado</dt><dd class="num">' + (bestE ? fmt(Math.round(bestE)) + "<small> kg</small>" : "–") + "</dd></div>" +
       '<div class="stat"><dt>Sesiones</dt><dd class="num">' + rows.length + "</dd></div></dl>";
@@ -973,7 +1056,7 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
     html += '<p class="small" style="margin-top:6px">1RM estimado con la fórmula de Epley: kg × (1 + reps / 30). Sirve para comparar sesiones con reps distintas.</p></div>';
     $("#exOut").innerHTML = html;
     $("#tableOut").innerHTML = '<div class="card"><h2>Sesiones</h2><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Series (kg × reps)</th></tr></thead><tbody>' +
-      rows.slice().reverse().map(r => "<tr><td>" + dmy(r.doc.date) + (r.doc.deload ? '<span class="pill">descarga</span>' : "") + "</td><td>" + r.sets.map(setText).join(" · ") + (r.doc.note ? '<br><span class="small">' + esc(r.doc.note) + "</span>" : "") + "</td></tr>").join("") +
+      rows.slice().reverse().map(r => "<tr><td>" + DOW[parseISO(r.doc.date).getDay()] + " " + dmy(r.doc.date) + (r.doc.deload ? '<span class="pill">descarga</span>' : "") + "</td><td>" + r.sets.map(setText).join(" · ") + (r.doc.note ? '<br><span class="small">' + esc(r.doc.note) + "</span>" : "") + "</td></tr>").join("") +
       "</tbody></table></div></div>";
   }
 
@@ -1014,7 +1097,7 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
       if (!state.sessions.size) { msg.textContent = "Aún no hay series para guardar."; return; }
       const obj = {};
       state.sessions.forEach((v, k) => { obj[k] = v; });
-      const data = JSON.stringify({ app: "cuaderno-de-cargas", version: 1, exported: new Date().toISOString(), sessions: obj });
+      const data = JSON.stringify({ app: "cuaderno-de-cargas", version: 2, exported: new Date().toISOString(), sessions: obj, setup: getSetup() });
       return offerFile("cuaderno-de-cargas-" + todayISO() + ".json", data, "application/json").then(r => {
         if (r === "cancel") { msg.textContent = "Copia cancelada."; return; }
         ls.set(LS_BACKUP, todayISO());
@@ -1101,6 +1184,11 @@ ol.steps { margin: 0; padding-left: 1.2em; font-size: 0.9rem; display: flex; fle
         const obj = JSON.parse(text);
         if (!obj || obj.app !== "cuaderno-de-cargas" || typeof obj.sessions !== "object") throw new Error("formato");
         incoming = obj.sessions;
+        if (obj.setup && typeof obj.setup === "object") {
+          const cur = getSetup();
+          Object.keys(obj.setup).forEach(k => { if (!cur[k] && typeof obj.setup[k] === "string") cur[k] = obj.setup[k]; });
+          ls.set(LS_SETUP, JSON.stringify(cur));
+        }
       } else incoming = sessionsFromCSV(text);
       return flush().then(() => {
         let added = 0, merged = 0;
